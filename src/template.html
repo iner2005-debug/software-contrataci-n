@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOFTWARE DE CONTRATACION</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: an internal office tool for a public hospital's contracting area
+   IDEA the official expediente on letterhead, where every value the software fills lights up like a highlighter mark
+   PICTURE the live paper sheet beside the form, yellow marks on filled fields, red on missing ones
+   COLOUR white ground, ink #101418, highlighter yellow #ffd84a, slate support, red for errors
+   TYPE Manrope for the app, Tinos (Times-like) for the printed document
+   LAYOUT laptop: form column left, paper right; phone: title, form, paper */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#101418);--ink:light-dark(#101418,#eef1f4);--mut:light-dark(#4a5563,#a8b1bd);--line:light-dark(#dfe3e8,#2a323c);--panel:light-dark(#f4f6f8,#161c23);--y:#ffd84a;--yd:light-dark(#fff3b8,#5c4d0f);--red:light-dark(#c62828,#ff7b72);--redbg:light-dark(#fdecea,#3a1715);--ok:light-dark(#1e7a46,#5fd08f);--desk:light-dark(#e9ecef,#0b0f13)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Manrope,system-ui,sans-serif;overflow-x:clip}
+header{padding:22px max(4vw,16px) 0;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(26px,3.4vw,36px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.sub{color:var(--mut);margin:6px 0 14px;font-size:15px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{font:600 15px Manrope,sans-serif;background:none;border:0;border-bottom:3px solid transparent;color:var(--mut);padding:10px 14px;min-height:44px;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
+.view{display:none}.view.on{display:block}
+.app{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);min-height:calc(100vh - 120px)}
+.form{padding:20px max(2vw,16px) 40px;border-right:1px solid var(--line)}
+.desk{background:var(--desk);padding:18px clamp(12px,2.5vw,36px) 40px}
+fieldset{border:0;padding:0;margin:0 0 22px}
+legend{font-weight:800;font-size:18px;margin-bottom:8px;display:flex;gap:10px;align-items:center}
+legend span{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:14px}
+.hint{color:var(--mut);font-size:14px;margin:-4px 0 10px}
+label{display:block;font-weight:600;font-size:14px;margin:10px 0 4px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+input,select,textarea{width:100%;font:16px Manrope,sans-serif;color:var(--ink);background:var(--bg);border:1px solid light-dark(#b9c0c9,#3b4552);border-radius:8px;padding:10px 12px;min-height:44px}
+textarea{min-height:90px;line-height:1.45;font-size:15px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid var(--y);outline-offset:1px}
+input.bad{border-color:var(--red);background:var(--redbg)}
+.calc{background:var(--panel);border-radius:10px;padding:12px 14px;margin:10px 0 0;font-size:14px}
+.calc div{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.calc div:last-child{border:0}
+.calc b{text-align:right;font-weight:700}
+.calc small{color:var(--mut);display:block;margin-bottom:4px}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.btn{font:700 15px Manrope,sans-serif;border-radius:8px;min-height:44px;padding:10px 16px;cursor:pointer;border:1px solid var(--ink);background:var(--bg);color:var(--ink)}
+.btn.main{background:var(--ink);color:var(--bg);width:100%;font-size:17px}
+.btn.main:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.checks{list-style:none;padding:0;margin:0 0 14px;font-size:14px}
+.checks li{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.checks li::before{content:"✓";font-weight:800;color:var(--ok);flex:none;width:16px}
+.checks li.err::before{content:"✕";color:var(--red)}
+.checks li.warn::before{content:"!";color:#b7791f}
+.doctabs{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:10px}
+.doctabs button{flex:none;font:600 14px Manrope,sans-serif;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer;scroll-snap-align:start}
+.doctabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:0 0 10px}
+.legend i{display:inline-block;width:14px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:6px}
+.paper{background:#fff;color:#111;max-width:820px;margin:0 auto;padding:clamp(22px,5vw,64px) clamp(18px,6vw,72px);box-shadow:0 1px 2px rgba(0,0,0,.15),0 8px 24px rgba(0,0,0,.08);font:15.5px/1.55 Tinos,"Times New Roman",serif;text-align:justify;hyphens:manual}
+.paper .lh{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:22px;font:700 12.5px/1.3 Manrope,sans-serif;text-align:left}
+.paper .lh span:last-child{text-align:right;font-weight:500}
+.paper h2{font-size:17px;text-align:center;margin:0 0 16px;letter-spacing:.01em}
+.paper h3{font-size:15.5px;margin:18px 0 6px}
+.paper p{margin:0 0 10px}
+.paper ul,.paper ol{margin:0 0 10px;padding-left:22px}
+.paper table{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:14.5px;text-align:left}
+.paper td{border:1px solid #444;padding:6px 8px;vertical-align:top}
+.paper td:first-child{font-weight:700;width:34%}
+.paper mark{background:#ffe680;color:#111;padding:0 2px;border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.paper mark.miss{background:#ffd3cf;color:#8b1a12;font-family:Manrope,sans-serif;font-size:13px;font-weight:700}
+.paper .fixed{font-family:Manrope,sans-serif;font-size:13px;color:#4a5563;background:#f1f3f5;border-left:3px solid #9aa4b1;padding:8px 12px;margin:10px 0 14px;text-align:left}
+.sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;margin-top:44px;text-align:center;font-size:14.5px}
+.sign div{border-top:1px solid #111;padding-top:6px}
+.wrap{max-width:900px;padding:22px max(4vw,16px) 48px}
+.wrap h2{font-size:24px;margin:0 0 6px;letter-spacing:-.01em}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px;background:var(--bg)}
+.scroll{overflow-x:auto}.catgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:24px;align-items:start}.catgrid #cat .card{position:sticky;top:12px}.ptab tr.sel td{background:var(--yd)}
+@media(max-width:900px){.catgrid{grid-template-columns:minmax(0,1fr)}.catgrid #cat .card{position:static}}
+.ptab{width:100%;border-collapse:collapse;font-size:14px}.ptab th,.ptab td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ptab th{font-weight:700;color:var(--mut)}.ptab td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.ptab tr{cursor:pointer}.ptab tbody tr:hover{background:var(--panel)}
+.dlg{position:fixed;inset:0;background:rgba(10,14,18,.55);display:none;place-items:center;padding:16px;z-index:9}
+.dlg.on{display:grid}
+.dlg .box{background:var(--bg);color:var(--ink);border-radius:14px;max-width:560px;width:100%;padding:22px;max-height:90vh;overflow:auto}
+.files{list-style:none;padding:0;margin:12px 0}
+.files li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+.files em{font-style:normal;font-size:12px;font-weight:700;background:var(--yd);padding:3px 8px;border-radius:5px;white-space:nowrap}
+.note{font-size:13px;color:var(--mut)}
+.paper .mem{display:block;width:calc(100% + 2*clamp(18px,6vw,72px));max-width:none;margin:0 calc(-1*clamp(18px,6vw,72px))}
+.paper .mem.sup{margin-top:calc(-1*clamp(22px,5vw,64px));margin-bottom:14px}.paper .mem.inf{margin-bottom:calc(-1*clamp(22px,5vw,64px));margin-top:24px}
+.paper p.c{text-align:center}.paper p.l{text-align:left}.paper p.small{font-size:12px;margin-top:18px}
+.paper tr.th td,.paper td.span{background:#e2efd9;font-weight:700;text-align:center}
+.paper .sign div{border:0;padding:0}.paper .sign .line{display:block;border-top:1px solid #111;margin:40px auto 6px;width:85%}
+.ficha{display:none;border-radius:10px;padding:12px 14px;margin:10px 0 0;font-size:14px;background:var(--yd);border:1px solid light-dark(#e8cf6a,#7a6a24)}
+.ficha.on{display:block}.ficha.nuevo{background:var(--panel);border-color:var(--line)}
+.ficha .fhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 14px;margin:6px 0 8px}.dl dt{font-size:12px;color:var(--mut)}.dl dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.ptab.mini{font-size:13px;background:var(--bg);border-radius:8px}.ptab.mini td,.ptab.mini th{padding:6px 8px}.ptab.mini tr{cursor:default}
+details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px}
+.gset{border:1px solid var(--line);border-radius:10px;padding:8px 12px 10px;margin:12px 0 0}.gset legend{font-size:15px;padding:0 6px;margin:0}
+.gdocs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}.chk{display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0;min-height:32px}.chk input,.opt input{width:auto;min-height:0;accent-color:var(--ink)}
+.opt{display:flex;gap:10px;align-items:flex-start;margin:6px 0;padding:6px 4px;font-weight:500;cursor:pointer;border-radius:8px}.opt:hover{background:var(--panel)}.opt input{margin-top:5px;flex:none}.opt small{display:block;color:var(--mut);font-size:13px}
+.lnk{background:none;border:0;color:var(--mut);text-decoration:underline;font:500 13px Manrope,sans-serif;cursor:pointer;padding:0 4px}
+.gmsg{margin:12px 0 0;font-size:14px;min-height:1em}.gmsg.ok{color:var(--ok)}.gmsg.bad{color:var(--red)}
+.dlgbtn{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}.dlgbtn .btn.main{width:auto}
+@media(max-width:480px){.gdocs{grid-template-columns:minmax(0,1fr)}.dlgbtn{flex-direction:column-reverse}.dlgbtn .btn{width:100%}}
+.status{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;margin:0 0 8px}
+.pill{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--panel)}
+.pill.ok{color:var(--ok)}
+.savebar{background:var(--panel);font-size:14px}.sbtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.sbbtn{display:flex;gap:8px;flex-wrap:wrap}.savebar .ok{color:var(--ok)}.savebar .bad{color:var(--red)}.sbwarn{margin:10px 0 0;padding:8px 12px;border-radius:8px;background:var(--yd)}.pill.bad{color:var(--red)}
+@media(max-width:900px){.app{grid-template-columns:minmax(0,1fr)}.form{border-right:0;border-bottom:1px solid var(--line)}}
+@media(max-width:480px){.row{grid-template-columns:minmax(0,1fr)}.paper{font-size:15px}.paper td:first-child{width:40%}}
+@media(prefers-reduced-motion:no-preference){.paper mark{transition:background .4s}.paper mark.flash{background:var(--y)}}
+@media print{header,.form,.doctabs,.legend,.toolbar{display:none!important}.desk{background:#fff;padding:0}.paper{box-shadow:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Generador de expedientes de contratación</h1>
+  <p class="sub">ESE Hospital Local María La Baja · elija el perfil, llene los datos y genere los 7 documentos en Word o PDF con el membrete del hospital.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-v="nuevo" id="t-nuevo">Nuevo contrato</button>
+    <button role="tab" aria-selected="false" data-v="contratistas" id="t-contratistas">Contratistas</button>
+    <button role="tab" aria-selected="false" data-v="catalogo" id="t-catalogo">Catálogo de perfiles</button>
+    <button role="tab" aria-selected="false" data-v="ajustes" id="t-ajustes">Ajustes (una sola vez)</button>
+  </div>
+</header>
+
+<section class="view on" id="v-nuevo">
+ <div class="app">
+  <form class="form" id="f" autocomplete="off">
+   <fieldset><legend><span>1</span>Tipo de contrato</legend>
+    <p class="hint">Al elegir el perfil se cargan el objeto, las obligaciones, los alcances, el rubro, el supervisor y el valor y plazo sugeridos.</p>
+    <label for="perfil">Perfil (<span id="nperf"></span> en el catálogo)</label><select id="perfil"></select>
+    <p class="note" id="perfinfo" style="margin:6px 0 0"></p>
+    <div class="presets" style="margin:10px 0 0">
+     <button type="button" class="btn sm" id="ejload">Cargar ejemplo de este perfil</button>
+     <button type="button" class="btn sm" id="vaciar">Vaciar datos</button></div>
+   </fieldset>
+
+   <fieldset><legend><span>2</span>Contratista</legend>
+    <p class="hint">Digite la cédula: si la persona ya tuvo contratos, sus datos se llenan solos.</p>
+    <div class="row">
+     <div><label for="ndoc">Número de cédula</label><input id="ndoc" inputmode="numeric" placeholder="1234567890" autocomplete="off"></div>
+     <div><label for="tdoc">Documento</label><select id="tdoc"><option>C.C.</option><option>NIT</option><option>C.E.</option></select></div>
+    </div>
+    <div class="ficha" id="ficha" aria-live="polite"></div>
+    <label for="nombre">Nombre completo</label><input id="nombre">
+    <label for="sexo">Trato en el documento</label>
+    <select id="sexo"><option value="">el (la) señor (a) — sin definir</option><option value="m">el señor / identificado</option><option value="f">la señora / identificada</option></select>
+    <details class="mas"><summary>Más datos del contratista (opcional)</summary>
+     <div class="row"><div><label for="exped">Cédula expedida en</label><input id="exped"></div><div><label for="tel">Teléfono</label><input id="tel" type="tel" inputmode="tel"></div></div>
+     <div class="row"><div><label for="correo">Correo</label><input id="correo" type="email"></div><div><label for="dir">Dirección</label><input id="dir"></div></div>
+     <p class="hint" style="margin:6px 0 0">Se guardan en el registro de contratistas; no salen en los documentos.</p>
+    </details>
+   </fieldset>
+
+   <fieldset><legend><span>3</span>Contrato y presupuesto</legend>
+    <div class="row">
+     <div><label for="meses">Plazo (meses)</label><input id="meses" type="number" min="1" max="12"></div>
+     <div><label for="valor">Valor total ($)</label><input id="valor" inputmode="numeric"></div>
+    </div>
+    <div class="row">
+     <div><label for="cdp">No. CDP</label><input id="cdp" placeholder="2026.CEN.01.000868"></div>
+     <div><label for="rp">No. RP</label><input id="rp"></div>
+    </div>
+    <label for="vigt">Vigencia en texto (opcional)</label><input id="vigt" placeholder="Ej.: DESDE EL 21 DE SEPTIEMBRE HASTA EL 31 DE OCTUBRE DE 2026">
+    <p class="hint" style="margin:4px 0 0">Solo si la vigencia no es en meses completos. Si se deja vacío, se escribe el plazo en meses.</p>
+    <label for="pagot">Forma de pago en texto (opcional)</label><input id="pagot" placeholder="Ej.: tres (03) pagos, uno de $1.000.000 y dos de $2.000.000">
+    <p class="hint" style="margin:4px 0 0">Solo si los pagos no son cuotas mensuales iguales.</p>
+    <label for="consec">Consecutivo del contrato</label><input id="consec" type="number" min="1">
+    <div class="calc" id="calc"></div>
+   </fieldset>
+
+   <fieldset><legend><span>4</span>Fechas</legend>
+    <div class="row">
+     <div><label for="fnec">Requerimiento de necesidad</label><input id="fnec" type="date"></div>
+     <div><label for="fcdp">Fecha del CDP</label><input id="fcdp" type="date"></div>
+    </div>
+    <label for="fsus">Suscripción (estudios, idoneidad, designación, contrato y acta)</label><input id="fsus" type="date">
+   </fieldset>
+
+   <div class="status"><span>Revisión antes de imprimir</span><span class="pill" id="pill"></span></div>
+   <ul class="checks" id="checks"></ul>
+   <button type="submit" class="btn main" id="gen">Generar Word / PDF / Imprimir…</button>
+  </form>
+
+  <div class="desk">
+   <div class="doctabs" role="tablist" id="doctabs"></div>
+   <div class="legend toolbar"><span><i style="background:#ffe680"></i>Llenado por el software (en el Word y el PDF sale sin color)</span><span><i style="background:#ffd3cf"></i>Falta un dato</span>
+    <button type="button" class="btn sm" id="copy" style="margin-left:auto">Copiar texto</button></div>
+   <article class="paper"><img class="mem sup" src="__MEMBRETE_SUP__" alt="Encabezado: E.S.E. Hospital Local María La Baja"><div id="paper"></div><img class="mem inf" src="__MEMBRETE_INF__" alt="Pie de página del hospital"></article>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="v-contratistas"><div class="wrap" style="max-width:1320px">
+ <h2>Contratistas</h2>
+ <p class="note" style="font-size:15px">Cada persona queda registrada al generar su expediente. Busque por cédula o nombre; desde aquí puede abrir un contrato anterior para reimprimirlo o empezar uno nuevo con sus datos.</p>
+ <label for="ctq">Buscar</label><input id="ctq" type="search" placeholder="Cédula o nombre" style="max-width:420px">
+ <p class="note" id="ctres" style="margin:8px 0 12px"></p>
+ <div class="catgrid">
+  <div><div class="scroll"><table class="ptab" id="ctlist"></table></div></div>
+  <div id="ctdet"></div>
+ </div></div></section>
+
+<section class="view" id="v-catalogo"><div class="wrap" style="max-width:1320px">
+ <h2>Catálogo de perfiles</h2>
+ <div class="card savebar" data-sb></div>
+ <p class="note" style="font-size:15px">Se crea una vez por cada tipo de contrato. Lo que edite aquí se refleja de inmediato en la vista previa. Una línea = una obligación o un alcance; la numeración la pone el software. Las obligaciones generales (garantizar, obrar con seriedad, reserva, examen médico, cuenta de cobro…) las agrega el software a todos los perfiles.</p>
+ <div class="presets"><select id="catsel" style="max-width:420px" aria-label="Perfil a editar"></select><button type="button" class="btn sm" id="catnew">Nuevo perfil</button><button type="button" class="btn sm" id="catdup">Duplicar este</button><button type="button" class="btn sm" id="catdel">Eliminar este</button></div>
+ <div class="catgrid">
+  <div><div class="scroll"><table class="ptab" id="ptab"></table></div><p class="note">* Vigencia por fechas o pagos especiales. Clic en una fila para editarla.</p></div>
+  <div id="cat"></div>
+ </div></div></section>
+
+<section class="view" id="v-ajustes"><div class="wrap">
+ <h2>Ajustes de la entidad</h2>
+ <p class="note" style="font-size:15px">Datos que se repiten en todos los contratos. Si cambia la gerente o la supervisora, se actualiza aquí y no en cada documento.</p>
+ <div class="card savebar" data-sb></div>
+ <div class="card" id="aj"></div>
+</div></section>
+
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="box">
+ <h2 id="dlgt" style="margin:0 0 4px;font-size:22px">Generar expediente</h2>
+ <p class="note" id="dlgs"></p>
+ <fieldset class="gset"><legend>¿Qué documentos? <button type="button" class="lnk" id="gtodos">todos / ninguno</button></legend><div id="gdocs" class="gdocs"></div></fieldset>
+ <fieldset class="gset"><legend>¿Cómo lo quiere?</legend>
+  <label class="opt"><input type="radio" name="gfmt" value="pdf"><span><b>PDF</b><small>Listo para imprimir, firmar o enviar</small></span></label>
+  <label class="opt"><input type="radio" name="gfmt" value="word"><span><b>Word (.docx)</b><small>Para corregir o agregar algo antes de imprimir</small></span></label>
+  <label class="opt"><input type="radio" name="gfmt" value="ambos"><span><b>Word y PDF</b><small>Los dos formatos</small></span></label>
+  <label class="opt"><input type="radio" name="gfmt" value="imp"><span><b>Imprimir ahora</b><small>Abre la ventana de impresión: elija la impresora o "Guardar como PDF"</small></span></label>
+ </fieldset>
+ <fieldset class="gset" id="gmodobox"><legend>¿En cuántos archivos?</legend>
+  <label class="opt"><input type="radio" name="gmodo" value="uno"><span><b>Un solo archivo</b><small>Todos los documentos seguidos, cada uno en hoja nueva</small></span></label>
+  <label class="opt"><input type="radio" name="gmodo" value="sep"><span><b>Un archivo por documento</b><small>Se descargan juntos en un .zip</small></span></label>
+ </fieldset>
+ <p class="note">Todos salen con el membrete del hospital: logo y escudo arriba, marca de agua y pie de página.</p>
+ <p class="gmsg" id="gmsg" aria-live="polite"></p>
+ <div class="dlgbtn"><button class="btn" id="dlgc" type="button">Cerrar</button><button class="btn main" id="gok" type="button">Generar</button></div>
+</div></div>
+
+<input type="file" id="impfile" accept=".json,application/json" hidden>
+<!--LIBS-->
+<script>
+{
+/*SCRIPT*/
+}
+</script>
+</body>
+</html>

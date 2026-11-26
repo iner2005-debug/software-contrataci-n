@@ -1,0 +1,7 @@
+dist/
+__pycache__/
+*.pyc
+~$*
+
+# Expedientes reales (datos personales): no se publican
+docs/expedientes_originales/
