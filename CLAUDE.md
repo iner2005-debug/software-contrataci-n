@@ -28,7 +28,7 @@ Generador de expedientes de contratación directa (prestación de servicios) par
 - Fechas en letras: "primero (01) del mes de septiembre del año dos mil veintiséis (2026)".
 - Vigencia (`vmodo`): `meses` | `dias` (meses + vdias) | `fechas` (vini–vfin → "DESDE EL 21 DE SEPTIEMBRE HASTA EL 31 DE OCTUBRE DE 2026") | `texto` (vigt).
 - Forma de pago (`pmodo`): `iguales` (ncuotas; vacío = una por mes de vigencia; debe dividir exacto) | `unico` | `varios` (`pagos` = JSON de valores; deben sumar el total) | `texto` (pagot). Si no hay modo guardado (datos viejos), se deduce: texto si hay vigt/pagot.
-- Perfiles: `vigTexto`/`pagoTexto` (texto libre sugerido) o `vigSug`/`pagoSug` (sugerencia estructurada, p. ej. `{"pmodo":"varios","pagos":[1000000,2000000]}`).
+- Perfiles: `vigTexto`/`pagoTexto` (texto libre sugerido) o `vigSug`/`pagoSug` (sugerencia estructurada, p. ej. `{"pmodo":"varios","pagos":[1000000,2000000]}`). En el Catálogo no se escriben a mano: se muestran calculadas y el botón «Tomar las del formulario» las copia de Nuevo contrato.
 
 ## Almacenamiento (todo en localStorage del navegador)
 - `contratacion-hlmlb-v1`: catálogo, ajustes y formulario en curso. "Volver al original" lo borra.

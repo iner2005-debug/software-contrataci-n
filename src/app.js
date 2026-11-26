@@ -162,8 +162,10 @@ function renderCat(){const i=catI,p=D.perfiles[i];$('cat').innerHTML=`<div class
  ${TA(i,'objeto','Objeto',90)}
  <div class="row"><div><label for="c-rubro">Rubro</label><input id="c-rubro" data-k="rubro" value="${esc(p.rubro)}"></div><div><label for="c-rubroNombre">Nombre del rubro</label><input id="c-rubroNombre" data-k="rubroNombre" value="${esc(p.rubroNombre)}"></div></div>
  <div class="row"><div><label for="c-valorSug">Valor sugerido ($)</label><input id="c-valorSug" data-k="valorSug" data-n="1" value="${esc(p.valorSug)}"></div><div><label for="c-mesesSug">Meses sugeridos</label><input id="c-mesesSug" data-k="mesesSug" data-n="1" value="${esc(p.mesesSug)}"></div></div>
- <label for="c-vigTexto">Vigencia en texto sugerida (opcional)</label><input id="c-vigTexto" data-k="vigTexto" value="${esc(p.vigTexto||'')}">
- <label for="c-pagoTexto">Forma de pago especial (opcional)</label><input id="c-pagoTexto" data-k="pagoTexto" value="${esc(p.pagoTexto||'')}">
+ ${(()=>{const[v,pg]=resumenSug(p);return`<label>Vigencia y forma de pago sugeridas</label>
+ <div class="eco bien" style="margin-top:0">Vigencia: <b>${esc(v||'—')}</b><br>Pago: <b>${esc(pg||'—')}</b></div>
+ <button type="button" class="btn sm" id="c-sugusar" style="margin-top:8px">Tomar las del formulario «Nuevo contrato»</button>
+ <p class="hint" style="margin:6px 0 0">Se calculan solas con el valor y los meses sugeridos. Si este perfil se contrata distinto (por fechas, pagos diferentes…), llénelo así una vez en «Nuevo contrato» con este perfil y pulse el botón: queda guardado como sugerencia.</p>`})()}
  ${TA(i,'obligaciones','Obligaciones específicas (una por línea)',200)}
  ${TA(i,'alcances','Alcances (uno por línea)',150)}
  ${TA(i,'necesidad','Descripción de la necesidad (un párrafo por línea)',150)}
@@ -181,6 +183,17 @@ $('cat').addEventListener('change',e=>{if(e.target.tagName==='SELECT')e.target.d
 const addPerfil=base=>{const id='perfil-'+Date.now();D.perfiles.push({...JSON.parse(JSON.stringify(base)),id,nombre:base.nombre?base.nombre+' (copia)':'Nuevo perfil'});catI=D.perfiles.length-1;renderPerfilSel();renderCat();guardar()};
 $('catnew').onclick=()=>addPerfil({nombre:'',tipo:'APOYO A LA GESTIÓN',supervisor:'adm',objeto:'',rubro:'',rubroNombre:'',idoneidad:'',necesidad:[],conveniencia:[],consideraciones:[],obligaciones:[],alcances:[],valorSug:0,mesesSug:2,vigTexto:'',pagoTexto:'',ejemplo:{}});
 $('catdup').onclick=()=>addPerfil(D.perfiles[catI]);
+/* sugerencia de vigencia y pago del perfil: se calcula sola o se toma del formulario */
+function resumenSug(p){const antes=S;S={...S,...sugPerfil(p)};try{const v=vigencia(),pg=formaPago(Number(p.valorSug)||0,v);return[v.texto,pg.texto]}finally{S=antes}}
+$('cat').addEventListener('click',e=>{if(e.target.id!=='c-sugusar')return;const p=D.perfiles[catI];
+ if(S.perfil!==p.id&&!confirm(`El formulario «Nuevo contrato» tiene otro perfil (${PA().nombre}). ¿Usar igual su vigencia y forma de pago para «${p.nombre}»?`))return;
+ const c=compute();if(c.vig.falta||c.pg.falta||c.vig.error||c.pg.error)return alert('Primero complete bien la vigencia y la forma de pago en «Nuevo contrato» (no debe haber avisos en rojo).');
+ const vm=vModo(),pm=pModo();
+ Object.assign(p,{valorSug:c.val||p.valorSug,mesesSug:Number(S.meses)||c.vig.meses||p.mesesSug,
+  vigTexto:vm==='texto'?String(S.vigt||'').trim():'',pagoTexto:pm==='texto'?String(S.pagot||'').trim():'',
+  vigSug:vm==='meses'?undefined:{vmodo:vm,meses:S.meses,vdias:S.vdias,vini:S.vini,vfin:S.vfin},
+  pagoSug:pm==='iguales'&&!S.ncuotas?undefined:{pmodo:pm,ncuotas:S.ncuotas,pagos:listaPagos()}});
+ renderCat();renderPtab();guardar()});
 
 $('catdel').onclick=()=>{if(D.perfiles.length<2)return alert('Debe quedar al menos un perfil.');const p=D.perfiles[catI];
  if(!confirm(`¿Eliminar el perfil "${p.nombre}"? Esta acción no se puede deshacer (salvo con "Volver al original" o cargando una copia).`))return;
@@ -192,9 +205,10 @@ const huella=t=>{let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;r
 const BASE=huella(JSON.stringify(D));
 let gT=0,gUlt=null,gErr=false,gViejo=false,cargando=true;
 const hora=d=>d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-function guardar(){if(cargando)return;clearTimeout(gT);gT=setTimeout(()=>{
- try{localStorage.setItem(KEY,JSON.stringify({v:1,base:BASE,ts:Date.now(),general:D.general,perfiles:D.perfiles,ajustes:AJ,form:S}));gUlt=new Date();gErr=false}catch(e){gErr=true}
- renderSave()},300)}
+function guardarYa(){try{localStorage.setItem(KEY,JSON.stringify({v:1,base:BASE,ts:Date.now(),general:D.general,perfiles:D.perfiles,ajustes:AJ,form:S}));gUlt=new Date();gErr=false}catch(e){gErr=true}}
+function guardar(){if(cargando)return;clearTimeout(gT);gT=setTimeout(()=>{gT=0;guardarYa();renderSave()},300)}
+/* si se cierra o recarga la página antes de los 300 ms, se guarda de inmediato */
+addEventListener('pagehide',()=>{if(gT&&!cargando){clearTimeout(gT);gT=0;guardarYa()}});
 function leerGuardado(){try{const t=localStorage.getItem(KEY);return t?JSON.parse(t):null}catch(e){return null}}
 function aplicar(o){
  if(Array.isArray(o.perfiles)&&o.perfiles.length)D.perfiles=o.perfiles;
