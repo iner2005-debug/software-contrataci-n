@@ -189,7 +189,7 @@ function bloques(k,c){
   PI(M,' – ',Dp,', ',x(c.fsusL,'fecha de suscripción')),
   TBL([[b('PARA'),[xb(c.sup.n,'supervisor'),' - ',c.sup.c]],[b('DE'),[xb(AJ.gerente,'gerente'),' – GERENTE']],[b('ASUNTO'),b('DESIGNACIÓN DE SUPERVISIÓN')]],[22,78]),
   P('Por medio del presente me permito comunicarle que ha sido designado (a) para ejercer la supervisión y control de la debida ejecución del objeto y las obligaciones contractuales que se relacionan a continuación:'),
-  TBL([[b('CONTRATO'),b('CONTRATISTA'),b('OBJETO')],[[xb(c.num,'No. contrato')],[xb(S.nombre,'nombre'),', ',c.tr.id,' con ',x(c.doc,'documento')],[obj]]],[20,28,52],{head:1}),
+  TBL([[b('CONTRATO'),b('CONTRATISTA'),b('OBJETO')],[[xb(c.num,'No. contrato')],[xb(S.nombre,'nombre'),', ',c.tr.id,' con ',x(c.doc,'documento')],[obj]]],[27,25,48],{head:1}),
   P('Con el fin de adelantar un adecuado seguimiento a la ejecución contractual, es su obligación realizar un estudio completo y detallado del contrato y de los documentos que soportan la contratación, además de adelantar entre otras, las siguientes actividades:'),
   UL([['Los supervisores deben verificar el cumplimiento del objeto contractual y de las obligaciones contraídas por las partes.'],['Están facultados para solicitar a los contratistas informes, aclaraciones y explicaciones sobre el desarrollo de la ejecución contractual.'],['Y serán responsables por mantener informada a la entidad contratante de los hechos o circunstancias que puedan afectar la ejecución del contrato, o que puedan poner o pongan en riesgo el cumplimiento del contrato, o cuando tal incumplimiento se presente elaborando el informe respectivo.']]),
   P('Por lo tanto, corresponde al supervisor llevar a cabo:'),

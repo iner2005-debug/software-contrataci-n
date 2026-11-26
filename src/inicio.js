@@ -11,3 +11,6 @@ else{const p0=D.perfiles.find(p=>p.id==='enfermeras')||D.perfiles[0];$('perfil')
 buscarCedula(true);render();
 cargando=false;
 
+
+/* Entrada para pruebas automáticas: solo con #prueba en la dirección. */
+if(location.hash==='#prueba')window.__app={D,get S(){return S},read,set,compute,bloques,aHTML,DOCLIST,sugPerfil,pesos,hacerWord,hacerPDF};
