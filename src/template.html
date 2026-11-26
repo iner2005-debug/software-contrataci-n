@@ -86,6 +86,21 @@ input.bad{border-color:var(--red);background:var(--redbg)}
 .files li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .files em{font-style:normal;font-size:12px;font-weight:700;background:var(--yd);padding:3px 8px;border-radius:5px;white-space:nowrap}
 .note{font-size:13px;color:var(--mut)}
+/* formulario y documento a la vez */
+.vista{display:none}
+@media(min-width:901px){.desk{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}}
+@media(max-width:900px){.vista{display:flex;position:sticky;top:0;z-index:5;gap:6px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+ .vista button{flex:1;font:700 15px Manrope,sans-serif;min-height:44px;border-radius:999px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer}
+ .vista button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+ .app .desk{display:none}.app.ver-doc .desk{display:block}.app.ver-doc .form{display:none}}
+@media(max-width:900px){.desk{position:relative}}
+.paper mark[data-f]{cursor:pointer}
+.paper mark[data-f]:hover,.paper mark.sel{outline:2px solid #b98900;outline-offset:1px}
+@media(prefers-reduced-motion:no-preference){.paper mark.brillo{animation:brillo 1.5s ease-out}@keyframes brillo{0%,35%{background:#ffb800;box-shadow:0 0 0 4px #ffb800}100%{background:#ffe680;box-shadow:none}}
+ input.brillo,select.brillo,textarea.brillo{animation:brilloc 1.5s ease-out}@keyframes brilloc{0%,40%{box-shadow:0 0 0 4px var(--y)}100%{box-shadow:none}}}
+.editbtn{position:absolute;z-index:6;font:700 13px Manrope,sans-serif;background:#101418;color:#fff;border:0;border-radius:8px;padding:7px 11px;min-height:34px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis}
+.editbtn span{font-weight:500;opacity:.75;margin-left:4px}
+.editbtn:hover{background:#000}
 .paper .mem{display:block;width:calc(100% + 2*clamp(18px,6vw,72px));max-width:none;margin:0 calc(-1*clamp(18px,6vw,72px))}
 .paper .mem.sup{margin-top:calc(-1*clamp(22px,5vw,64px));margin-bottom:14px}.paper .mem.inf{margin-bottom:calc(-1*clamp(22px,5vw,64px));margin-top:24px}
 .paper p.c{text-align:center}.paper p.l{text-align:left}.paper p.small{font-size:12px;margin-top:18px}
@@ -128,6 +143,7 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
 
 <section class="view on" id="v-nuevo">
  <div class="app">
+  <div class="vista" id="vista" role="group" aria-label="Ver"><button type="button" data-vista="form" aria-pressed="true">✎ Formulario</button><button type="button" data-vista="doc" aria-pressed="false">📄 Documento</button></div>
   <form class="form" id="f" autocomplete="off">
    <fieldset><legend><span>1</span>Tipo de contrato</legend>
     <p class="hint">Al elegir el perfil se cargan el objeto, las obligaciones, los alcances, el rubro, el supervisor y el valor y plazo sugeridos.</p>
@@ -186,8 +202,9 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
   </form>
 
   <div class="desk">
+   <button type="button" class="editbtn" id="editbtn" hidden></button>
    <div class="doctabs" role="tablist" id="doctabs"></div>
-   <div class="legend toolbar"><span><i style="background:#ffe680"></i>Llenado por el software (en el Word y el PDF sale sin color)</span><span><i style="background:#ffd3cf"></i>Falta un dato</span>
+   <div class="legend toolbar"><span><i style="background:#ffe680"></i>Llenado por el software: tóquelo para <b>✎ Editar</b> (en el Word y el PDF sale sin color)</span><span><i style="background:#ffd3cf"></i>Falta un dato</span>
     <button type="button" class="btn sm" id="copy" style="margin-left:auto">Copiar texto</button></div>
    <article class="paper"><img class="mem sup" src="__MEMBRETE_SUP__" alt="Encabezado: E.S.E. Hospital Local María La Baja"><div id="paper"></div><img class="mem inf" src="__MEMBRETE_INF__" alt="Pie de página del hospital"></article>
   </div>

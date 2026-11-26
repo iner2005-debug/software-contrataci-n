@@ -5,10 +5,10 @@ Generador de expedientes de contratación directa (prestación de servicios) par
 
 ## Cómo está armado
 - `src/template.html`: HTML + CSS. Marcadores: `<!--LIBS-->` (librerías de vendor/), `/*SCRIPT*/` (código), `__MEMBRETE_SUP__`/`__MEMBRETE_INF__` (imágenes de la vista previa).
-- Código en `src/`, unido en este orden y en un mismo bloque: `app.js` (formulario, compute, checks, catálogo, ajustes, guardado, diálogo Generar), `documentos.js` (texto de los 7 documentos como bloques), `exportar.js` (vista previa HTML, Word con JSZip sobre `assets/rotulo.docx`, PDF con pdfmake con `assets/membrete.jpg` de fondo), `contratistas.js` (registro por cédula), `inicio.js` (arranque).
+- Código en `src/`, unido en este orden y en un mismo bloque: `app.js` (formulario, compute, checks, catálogo, ajustes, guardado, diálogo Generar), `documentos.js` (texto de los 7 documentos como bloques), `exportar.js` (vista previa HTML, Word con JSZip sobre `assets/rotulo.docx`, PDF con pdfmake con `assets/membrete.jpg` de fondo), `contratistas.js` (registro por cédula), `edicion.js` (el documento sigue a la casilla que se está llenando; botón "✎ Editar" en cada dato resaltado que lleva a su casilla; alternar Formulario/Documento en celular), `inicio.js` (arranque).
 - `app.js` tiene `__DATA__` (catálogo) y `__ASSETS__` (membrete, plantilla docx, fuentes en base64).
 - `build.py` une todo en `dist/index.html` (~4 MB, sin dependencias externas). **Nunca editar `dist/` a mano.**
-- Un documento = lista de bloques `TIT/SEC/P/PC/PI/UL/TBL/FIR/NOTA`; piezas: texto, `b()` negrilla, `x()`/`xb()` dato variable (si falta sale "falta: …" en rojo). Los tres formatos salen de los mismos bloques.
+- Un documento = lista de bloques `TIT/SEC/P/PC/PI/UL/TBL/FIR/NOTA`; piezas: texto, `b()` negrilla, `x(valor,'etiqueta')`/`xb()` dato variable (si falta sale "falta: …" en rojo). La etiqueta debe estar en `FX` (documentos.js), que dice de qué casilla sale el dato: id del formulario, `cat:campo` o `aj:campo`. Los tres formatos salen de los mismos bloques.
 - `tools/preparar_membrete.py` regenera `assets/` a partir del Word del rótulo del hospital (compone la marca de agua al 30 %, mide dónde terminan encabezado y pie para los márgenes).
 - `tools/extraer_perfiles.py` convierte expedientes `.docx` en perfiles.
 - `.github/workflows/pages.yml` publica en GitHub Pages al hacer push a `main`.

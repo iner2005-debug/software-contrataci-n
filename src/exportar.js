@@ -8,13 +8,13 @@
 /* Normaliza el contenido de un bloque a una lista de piezas {s,b,v,m} */
 const runs=c=>{const o=[];const f=z=>{if(z==null||z==='')return;if(Array.isArray(z))z.forEach(f);else if(typeof z==='object'&&z.s!==undefined){if(z.s!=='')o.push(z)}else o.push({s:String(z)})};f(c);
  /* une piezas vecinas con el mismo formato */
- return o.reduce((a,r)=>{const l=a[a.length-1];if(l&&!!l.b===!!r.b&&!!l.v===!!r.v&&!!l.m===!!r.m)l.s+=r.s;else a.push({...r});return a},[])};
+ return o.reduce((a,r)=>{const l=a[a.length-1];if(l&&!!l.b===!!r.b&&!!l.v===!!r.v&&!!l.m===!!r.m&&(l.f||'')===(r.f||''))l.s+=r.s;else a.push({...r});return a},[])};
 const celda=cell=>cell&&!Array.isArray(cell)&&typeof cell==='object'&&cell.c!==undefined?{r:runs(cell.c),span:cell.span,alto:cell.alto}:{r:runs(cell)};
 const MEM=ASSETS.membrete;
 const MARGEN={top:Math.ceil(MEM.encabezadoHasta+16),bottom:Math.ceil(MEM.alto-MEM.pieDesde+16),side:MEM.margenIzq};
 
 /* ---------- vista previa ---------- */
-const hRuns=rs=>rs.map(r=>{let t=esc(r.s);if(r.b)t=`<b>${t}</b>`;return r.m?`<mark class="miss">${t}</mark>`:r.v?`<mark>${t}</mark>`:t}).join('');
+const hRuns=rs=>rs.map(r=>{let t=esc(r.s);if(r.b)t=`<b>${t}</b>`;const d=r.f?` data-f="${esc(r.f)}" data-l="${esc(r.l||'')}"`:'';return r.m?`<mark class="miss"${d}>${t}</mark>`:r.v?`<mark${d}>${t}</mark>`:t}).join('');
 function aHTML(bl){return bl.map(k=>{switch(k.k){
  case 'tit':return`<h2>${hRuns(runs(k.c))}</h2>`;
  case 'sec':return`<h3>${hRuns(runs(k.c))}</h3>`;

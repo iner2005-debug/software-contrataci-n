@@ -32,6 +32,8 @@ Abra `dist/index.html` en Chrome o Edge. En **Nuevo contrato**:
    - cómo los quiere: **PDF**, **Word**, **Word y PDF** o **Imprimir ahora**;
    - en un solo archivo (todo seguido) o un archivo por documento (en un `.zip`).
 
+Mientras llena el formulario, el documento de la derecha salta solo a la hoja donde sale el dato y lo resalta. Si ve un dato mal escrito en el documento, tóquelo: aparece **✎ Editar**, que lo lleva directo a la casilla para corregirlo, sea del formulario, del Catálogo o de los Ajustes. En el celular, use los botones **Formulario / Documento** de arriba.
+
 Al generar, la persona y el contrato quedan guardados en **Contratistas**. Desde ahí se puede abrir un contrato anterior para reimprimirlo, o empezar uno nuevo con los datos de esa persona.
 
 ## Dónde quedan los datos

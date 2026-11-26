@@ -12,7 +12,10 @@
    x(valor,'nombre')  dato que llena el software (si falta, se marca en rojo)
    xb(valor,'nombre') dato en negrilla                                        */
 const b=s=>({s:String(s),b:1});
-const x=(val,lbl,bold)=>(val||val===0)&&String(val).trim()!==''?{s:String(val),v:1,b:bold?1:0}:{s:'falta: '+lbl,m:1};
+/* De qué casilla sale cada dato: así "✎ Editar" lleva al lugar correcto.
+   Casilla del formulario, 'cat:campo' (Catálogo) o 'aj:campo' (Ajustes). */
+const FX={'nombre del contratista':'nombre','nombre':'nombre','documento':'ndoc','No. CDP':'cdp','fecha del CDP':'fcdp','No. RP':'rp','rubro':'cat:rubro','nombre del rubro':'cat:rubroNombre','objeto':'cat:objeto','meses':'meses','cuota':'valor','valor':'valor','plazo':'plazo','fecha de necesidad':'fnec','fecha de suscripción':'fsus','año':'fsus','No. contrato':'consec','forma de pago':'pagot','necesidad':'cat:necesidad','conveniencia':'cat:conveniencia','consideraciones':'cat:consideraciones','alcances':'cat:alcances','obligaciones':'cat:obligaciones','idoneidad':'cat:idoneidad','supervisor':'cat:supervisor','subgerente administrativa':'aj:supAdm','gerente':'aj:gerente'};
+const x=(val,lbl,bold)=>{const f=FX[lbl]||'',l=lbl||'';return(val||val===0)&&String(val).trim()!==''?{s:String(val),v:1,b:bold?1:0,f,l}:{s:'falta: '+lbl,m:1,f,l}};
 const xb=(val,lbl)=>x(val,lbl,1);
 /* --- bloques --- */
 const TIT=(...c)=>({k:'tit',c});                 // título centrado en negrilla
@@ -29,11 +32,11 @@ const DOCLIST=[['nec','Necesidad'],['est','Estudios previos'],['ido','Idoneidad'
 
 function bloques(k,c){
  const E=AJ.entidad,M=AJ.municipio,Dp=AJ.depto,obj=xb(c.p.objeto,'objeto'),anio=x(c.anio,'año');
- const pago=String(S.pagot||'').trim()?[x(String(S.pagot).trim())]:[x(c.cuotasL,'meses'),' cuotas mensuales iguales por valor de ',x(c.cuotaL,'cuota')];
+ const pago=String(S.pagot||'').trim()?[x(String(S.pagot).trim(),'forma de pago')]:[x(c.cuotasL,'meses'),' cuotas mensuales iguales por valor de ',x(c.cuotaL,'cuota')];
  const cdp=['CERTIFICADO DE DISPONIBILIDAD PRESUPUESTAL – CDP No. ',xb(S.cdp,'No. CDP'),' del ',x(c.fcdpC,'fecha del CDP'),' Rubro No. ',x(c.p.rubro,'rubro'),', con Nombre: ',x(c.p.rubroNombre,'nombre del rubro')];
  const persona=[c.tr.sr,' ',xb(S.nombre,'nombre del contratista'),', ',c.tr.id,' con ',x(c.doc,'documento')];
- const ob=c.obl.map(t=>c.p.obligaciones.includes(t)?[x(t)]:[t]);
- const supFirma=[[xb(c.sup.n)],[c.sup.c]];
+ const ob=c.obl.map(t=>c.p.obligaciones.includes(t)?[x(t,'obligaciones')]:[t]);
+ const supFirma=[[xb(c.sup.n,'supervisor')],[c.sup.c]];
  switch(k){
 
  case 'nec':return[
@@ -43,13 +46,13 @@ function bloques(k,c){
   P('Es así que en esta oportunidad se requiere contratar una persona natural o jurídica que imparta la ',obj),
   P('El anterior personal y/o servicio es requerido para el cumplimiento de las obligaciones legales establecidas, garantizando los fines legales pertinentes.'),
   P('Queda constancia que la necesidad planteada se suscribió el día ',x(c.fnecL,'fecha de necesidad'),'.'),
-  FIR([[xb(AJ.supAdm)],[AJ.supAdmCargo]])];
+  FIR([[xb(AJ.supAdm,'subgerente administrativa')],[AJ.supAdmCargo]])];
 
  case 'est':return[
   TIT('ESTUDIOS PREVIOS'),
   P('La ',E,', ha determinado la necesidad de adelantar los estudios previos que conducen a la celebración de un contrato de ',obj,' Con sujeción del Decreto 1082 del 26 de mayo de 2015 y del ',AJ.manual,' por medio del cual se adopta el Manual de Contratación.'),
   SEC('1. DESCRIPCIÓN DE LA NECESIDAD'),
-  ...c.p.necesidad.map(t=>P(x(t))),
+  ...c.p.necesidad.map(t=>P(x(t,'necesidad'))),
   SEC('2. JUSTIFICACIÓN DE LA NECESIDAD'),
   P('La forma en que se ha desarrollado la separación absoluta entre las esferas públicas y privada y de éstas en torno al desarrollo de actividades que interesan a la sociedad, se muestra propicia al afianzamiento de una concepción material de los asuntos públicos vinculados a su gestión, si bien siguen conservando su condición de tales, pueden en determinados momentos participar en el desempeño de actividades que en principio poseen características de funciones públicas, predicado que, según lo expuesto, tiene un fundamento material, en cuanto consulta, de preferencia, la función y el interés públicos involucrados en las tareas confiadas a sujetos particulares, por ello, es menester de seguridad y confianza pública el desarrollar todos y cada uno de los actos de la administración conforme está reglamentado, en aras de conservarle la seguridad jurídica que representan.'),
   P('La ',E,', está categorizada como una institución de primer nivel de atención cuyo objetivo es ofrecer servicios de salud entendidos como un servicio público a cargo del Municipio y como integrante del Sistema General de Seguridad Social en Salud (SGSSS).'),
@@ -57,13 +60,13 @@ function bloques(k,c){
   P('Entendido lo anterior, se debe exponer entonces que por la imposibilidad material de cubrir con el talento humano propio todas las actividades que requiere el objeto a satisfacer, por mantener el desarrollo de las actividades operativas y asistenciales que hacen parte del funcionamiento natural de la entidad.'),
   P('Como es sabido, las empresas sociales del estado requieren para su mantenimiento la solvencia de las obligaciones que en el curso natural de sus funciones pueden adquirir, es así que necesita realizar de manera constante, cobro y gestiones de los servicios asistenciales prestados, encontrando un equilibrio para adquirir y pagar obligaciones manteniendo la eficiente operatividad del centro hospitalario.'),
   SEC('3. CONVENIENCIA Y OPORTUNIDAD'),
-  ...c.p.conveniencia.map(t=>P(x(t))),
+  ...c.p.conveniencia.map(t=>P(x(t,'conveniencia'))),
   P('La satisfacción de la necesidad expuesta, resulta conveniente teniendo clara la necesidad del servicio; en el entendido que es conveniente la satisfacción de esta necesidad coadyuvara al cumplimiento y obligaciones naturales de la entidad, por lo anterior es oportuno impartir el respectivo proceso de contratación.'),
   P('Es así que a sabiendas que la presente contratación tiene como finalidad coadyuvar a mantener el cumplimiento de los fines misionales de la entidad establecidos en el Decreto 1876 de 1994 en el artículo 2 El objetivo de las Empresas Sociales del Estado será la prestación de servicio de salud, entendidos como un servicio público a cargo del Estado y como parte integrante del Sistema de Seguridad Social en Salud.'),
   P('En este orden de ideas, es oportuno impartir el proceso de contratación, en aras del cumplimiento de la ',obj,' Fundamentándose en las siguientes consideraciones:'),
   UL([['Realizar la ',obj],
    ['La ',E,' no posee el personal suficiente para el desarrollo de las actividades que se requieren cumplir en satisfacción del objeto contractual que se pretende satisfacer.'],
-   ...c.p.consideraciones.map(t=>[x(t)]),
+   ...c.p.consideraciones.map(t=>[x(t,'consideraciones')]),
    ['La contratación repercutirá de manera directa en las buenas y asertivas decisiones administrativas.'],
    ['Adoptar procedimientos para que se realice la supervisión de estas actividades bajo su control.'],
    ['Es necesario entonces, iniciar proceso de contratación con el propósito de lograr suplir la necesidad, mejorar y asegurar la prestación de los servicios de salud.'],
@@ -77,7 +80,7 @@ function bloques(k,c){
   P(b('4.3. OBLIGACIONES GENERALES.')),
   P(b('CONTRATANTE: '),...D.general.contratante.map((t,i)=>(i<D.general.contratante.length-1?(i+1)+') ':'')+t+' ')),
   P(b('CONTRATISTA: '),...ob.flatMap((t,i)=>[(i+1)+') ',...t,' '])),
-  P(b('4.4. SUPERVISORA: '),x(c.sup.c),' O QUIEN HAGA SUS VECES'),
+  P(b('4.4. SUPERVISORA: '),x(c.sup.c,'supervisor'),' O QUIEN HAGA SUS VECES'),
   P(b('4.5. VIGENCIA: '),x(c.plazoL,'plazo')),
   P(b('4.6. VALOR: '),x(c.valL,'valor')),
   P(b('4.7. FORMA DE PAGO: '),'Se pagará en ',...pago,', después de radicación de informe de gestión, cuenta de cobro y anexando la seguridad social correspondiente, previo certificado por el supervisor del contrato designado para el caso, y estas serán canceladas dentro de los diez (10) días calendario siguientes a su radicación en la tesorería de la entidad contratante.'),
@@ -93,7 +96,7 @@ function bloques(k,c){
   P('Teniendo de presente lo anterior, se deja constancia que el valor de la contratación surge y se fijó atendiendo las máximas de experiencia en las contrataciones realizadas por esta entidad, por los contratos de referencia encontrados en Secop I y los precios brindados y fijados por Colombia Compra Eficiente con objetos y obligaciones similares y/o iguales.'),
   SEC('7. ALCANCES DEL CONTRATO'),
   P('El objeto del contrato tiene los siguientes alcances:'),
-  UL([...c.p.alcances.map(t=>[x(t)]),['Repercute indirectamente en la eficiente garantía de los derechos de toda la comunidad del territorio del Municipio de ',M,' (',Dp,').']]),
+  UL([...c.p.alcances.map(t=>[x(t,'alcances')]),['Repercute indirectamente en la eficiente garantía de los derechos de toda la comunidad del territorio del Municipio de ',M,' (',Dp,').']]),
   P('Se evidencia dentro de lo expuesto la existencia de la necesidad planteada, por lo que resulta imprescindible adelantar el correspondiente proceso de contratación, para la buena marcha y efectivo cumplimiento de los cometidos de la ',E,'.'),
   SEC('8. CRITERIOS PARA SELECCIONAR LA OFERTA MÁS FAVORABLE.'),
   P('Teniendo de presente que se requiere satisfacer la necesidad presentada con ',obj,' Surge la necesidad de establecer los criterios para seleccionar la oferta más favorable:'),
@@ -172,19 +175,19 @@ function bloques(k,c){
   P('La garantía de la transparencia en la inversión de los recursos públicos dentro del marco contractual debe estar garantizado por los principios de transparencia, economía, coordinación, eficiencia, celeridad, planeación, responsabilidad, buena fe, imparcialidad y debido proceso. Por lo que respecto a las facultades de la Ley 80 de 1993, Ley 1150 del 2007, Ley 1438 del 2011, Decreto 855 de 1994; y en concordancia con la Ley 100 de 1993, Ley 1474 del 2011 y Decreto 1082 del 2015 y Manual interno de contratación ',AJ.manual,', regulan el marco de la contratación.'),
   UL([['El presente proceso de contratación administrativa está orientado por el manual de contratación de la ESE, en la modalidad de contratación directa.'],['Es deber de la entidad, cumplir con los requisitos de orden jurídico, técnico, administrativo y presupuestal que ordena el estatuto de contratación administrativa y demás normatividad legal para contratar el servicio objeto de este estudio.'],['La entidad debe expedir el certificado de disponibilidad presupuestal con cargo al presupuesto de rentas y gastos de la vigencia ',anio,', con el fin de iniciar al proceso de contratación.'],['La gerente está autorizada para contratar según acuerdo de la Junta Directiva.']]),
   P('Para concluir se evidencia dentro de lo expuesto la existencia de la necesidad planteada, por lo que resulta imprescindible adelantar el correspondiente proceso de contratación, para la buena marcha y efectivo cumplimiento de los cometidos de la ',E,'. Dado en el Municipio de ',M,' ',Dp,', el día ',x(c.fsusL,'fecha de suscripción'),'.'),
-  FIR([[xb(AJ.gerente)],['GERENTE']])];
+  FIR([[xb(AJ.gerente,'gerente')],['GERENTE']])];
 
  case 'ido':return[
   TIT('CERTIFICADO DE IDONEIDAD'),
   PC(b('LA SUSCRITA '+AJ.supAdmCargo+' DE LA '+E+' – '+Dp.toUpperCase())),
   PC(b('HACE CONSTAR:')),
-  P('Que ',...persona,', ha demostrado idoneidad con lo anotado en su propuesta y hoja de vida',c.p.idoneidad?[' ',x(c.p.idoneidad)]:'',', para ejecutar el objeto, ',obj,' circunstancia que le permite contratar.'),
+  P('Que ',...persona,', ha demostrado idoneidad con lo anotado en su propuesta y hoja de vida',c.p.idoneidad?[' ',x(c.p.idoneidad,'idoneidad')]:'',', para ejecutar el objeto, ',obj,' circunstancia que le permite contratar.'),
   P('Para constancia se expide y se firma en el municipio de ',M,' (',Dp,') el día ',x(c.fsusL,'fecha de suscripción'),'.'),
-  FIR([[xb(AJ.supAdm)],[AJ.supAdmCargo]])];
+  FIR([[xb(AJ.supAdm,'subgerente administrativa')],[AJ.supAdmCargo]])];
 
  case 'des':return[
   PI(M,' – ',Dp,', ',x(c.fsusL,'fecha de suscripción')),
-  TBL([[b('PARA'),[xb(c.sup.n),' - ',c.sup.c]],[b('DE'),[xb(AJ.gerente),' – GERENTE']],[b('ASUNTO'),b('DESIGNACIÓN DE SUPERVISIÓN')]],[22,78]),
+  TBL([[b('PARA'),[xb(c.sup.n,'supervisor'),' - ',c.sup.c]],[b('DE'),[xb(AJ.gerente,'gerente'),' – GERENTE']],[b('ASUNTO'),b('DESIGNACIÓN DE SUPERVISIÓN')]],[22,78]),
   P('Por medio del presente me permito comunicarle que ha sido designado (a) para ejercer la supervisión y control de la debida ejecución del objeto y las obligaciones contractuales que se relacionan a continuación:'),
   TBL([[b('CONTRATO'),b('CONTRATISTA'),b('OBJETO')],[[xb(c.num,'No. contrato')],[xb(S.nombre,'nombre'),', ',c.tr.id,' con ',x(c.doc,'documento')],[obj]]],[20,28,52],{head:1}),
   P('Con el fin de adelantar un adecuado seguimiento a la ejecución contractual, es su obligación realizar un estudio completo y detallado del contrato y de los documentos que soportan la contratación, además de adelantar entre otras, las siguientes actividades:'),
@@ -199,28 +202,28 @@ function bloques(k,c){
   P('Una vez finalice el contrato cuya supervisión le corresponda, tendrá la obligación de expedir un informe final de supervisión, la certificación final de cumplimiento del objeto contractual y proyectar el acta de liquidación respectiva, en los casos que aplique, la cual deberá venir acompañada de la certificación de pagos y el certificado de saldos y pagos expedidos por la tesorería de la E.S.E. HOSPITAL LOCAL ',M.toUpperCase(),'.'),
   P('Sea esta la oportunidad para reiterarle que en la oficina de contratación se le brindará el apoyo y asesoría que requiera.'),
   P('Atentamente,'),
-  FIR([[xb(AJ.gerente)],['GERENTE']])];
+  FIR([[xb(AJ.gerente,'gerente')],['GERENTE']])];
 
  case 'not':return[
   TIT('NOTIFICACIÓN A SUPERVISOR'),
-  TBL([[b('CONTRATO No.'),[xb(c.num,'No. contrato')]],[b('NOMBRE DEL SUPERVISOR'),[xb(c.sup.n)]],[b('CARGO'),[c.sup.c]],[b('FIRMA DEL SUPERVISOR'),{alto:1,c:['']}],[b('FECHA DE NOTIFICACIÓN'),[x(c.fsusL,'fecha de suscripción')]]],[35,65]),
-  FIR([[xb(AJ.gerente)],['GERENTE']])];
+  TBL([[b('CONTRATO No.'),[xb(c.num,'No. contrato')]],[b('NOMBRE DEL SUPERVISOR'),[xb(c.sup.n,'supervisor')]],[b('CARGO'),[c.sup.c]],[b('FIRMA DEL SUPERVISOR'),{alto:1,c:['']}],[b('FECHA DE NOTIFICACIÓN'),[x(c.fsusL,'fecha de suscripción')]]],[35,65]),
+  FIR([[xb(AJ.gerente,'gerente')],['GERENTE']])];
 
  case 'con':return[
   TIT('CONTRATO No. ',xb(c.num,'No. contrato')),
   TBL([[b('CONTRATANTE'),E],[b('NIT DEL CONTRATANTE'),AJ.nit],[b('CONTRATISTA'),[xb(S.nombre,'nombre')]],[b('NIT/C.C. DEL CONTRATISTA'),[x(cc(S.ndoc),'documento')]],[b('OBJETO'),[obj]],[b('PLAZO DE EJECUCIÓN'),[x(c.plazoL,'plazo')]],[b('VALOR'),[x(c.valL,'valor')]]],[30,70]),
-  P('Entre los suscritos a saber: ',xb(AJ.gerente),', mayor de edad, vecina del municipio de ',M,' (',Dp,'), con cédula de ciudadanía No. ',AJ.gerCc,', expedida en ',AJ.gerExp,', actuando en nombre y representación de la ',E,', con NIT. N° ',AJ.nit,', nombrada mediante ',AJ.gerDecreto,' y ',AJ.gerActa,' en su calidad de Gerente y por ende representante legal, quien para efectos del presente contrato en adelante se denominará EL CONTRATANTE o la ENTIDAD; por una parte y por la otra ',...persona,', que en adelante se denominará ',c.tr.al,', quien declara bajo la gravedad del juramento no encontrarse ',c.tr.inc,', en causal alguna de inhabilidad e incompatibilidad para contratar, de acuerdo con lo previsto artículo 8° de la Ley 80 de 1993, las contempladas en la ley 1474 de 2011, y en el ART. 7 del Manual de Contratación de la ',E,', y demás normas aplicables a la materia; quien para efectos del presente contrato se ha convenido celebrar el presente contrato de PRESTACIÓN DE SERVICIOS, previa las siguientes ',b('CONSIDERACIONES:')),
+  P('Entre los suscritos a saber: ',xb(AJ.gerente,'gerente'),', mayor de edad, vecina del municipio de ',M,' (',Dp,'), con cédula de ciudadanía No. ',AJ.gerCc,', expedida en ',AJ.gerExp,', actuando en nombre y representación de la ',E,', con NIT. N° ',AJ.nit,', nombrada mediante ',AJ.gerDecreto,' y ',AJ.gerActa,' en su calidad de Gerente y por ende representante legal, quien para efectos del presente contrato en adelante se denominará EL CONTRATANTE o la ENTIDAD; por una parte y por la otra ',...persona,', que en adelante se denominará ',c.tr.al,', quien declara bajo la gravedad del juramento no encontrarse ',c.tr.inc,', en causal alguna de inhabilidad e incompatibilidad para contratar, de acuerdo con lo previsto artículo 8° de la Ley 80 de 1993, las contempladas en la ley 1474 de 2011, y en el ART. 7 del Manual de Contratación de la ',E,', y demás normas aplicables a la materia; quien para efectos del presente contrato se ha convenido celebrar el presente contrato de PRESTACIÓN DE SERVICIOS, previa las siguientes ',b('CONSIDERACIONES:')),
   P(b('PRIMERO: '),'Que EL CONTRATANTE está facultado legal y estatutariamente para celebrar los contratos que sean necesarios para la prestación de los servicios que ofrece la ESE HOSPITAL LOCAL ',M.toUpperCase(),', para hacer posible el cumplimiento de su objeto social en especial la obligación contractual que se pretende desarrollar.'),
   P(b('SEGUNDO: '),'Valorando la planta general de cargos y las condiciones administrativas actuales de la ',E,', esta no dispone de las condiciones logísticas para realizar el desarrollo de estas acciones, conforme con la certificación expedida por la ',AJ.supAdmCargo.toLowerCase(),', de la E.S.E. En consecuencia, la ',E,' requiere de una persona natural o jurídica con experiencia en el objeto relacionado, apoyando la gestión institucional de la ',E,', para la adecuada ejecución de actividades de cobro y gestión, para tal fin esta contratación se encuentra regida por el Manual de Contratación, autorizada mediante la modalidad de Contratación Directa. En atención al objeto y cuantía contractual, este contrato se enmarca dentro del procedimiento establecido en el Manual de Contratación de la entidad, teniendo en cuenta los factores de selección que permiten identificar la oferta más favorable.'),
   P(b('TERCERO: '),'La Subdirección Financiera - Oficina de Presupuesto de la Empresa Social del Estado Hospital Local ',M,', constató que existe disponibilidad en el presupuesto de vigencia fiscal ',anio,' en el rubro denominado ',x(c.p.rubroNombre,'nombre del rubro'),' para cubrir los gastos que ocasione este contrato y, por lo tanto, expidió el CERTIFICADO DE DISPONIBILIDAD PRESUPUESTAL; En consecuencia, la ',E,' y EL CONTRATISTA suscriben el presente contrato de PRESTACIÓN DE SERVICIOS, el cual se regirá en forma general por el Manual de Contratación de la E.S.E., las reglas del derecho privado, y discrecionalmente por las cláusulas exorbitantes previstas en el estatuto general de contratación de la administración pública y en forma específica por el siguiente clausulado:'),
   P(b('CLÁUSULA PRIMERA: OBJETO DEL CONTRATO. '),'El presente contrato tiene como Objeto ',obj),
-  P(b('CLÁUSULA SEGUNDA: ALCANCE. '),'El alcance del objeto del contrato obliga al contratista a desarrollar todas las obligaciones y actividades detalladas para la óptima y eficaz operación de la entidad contratante, teniendo el siguiente alcance: ',...[...c.p.alcances.map(t=>[x(t)]),['Repercute indirectamente en la eficiente garantía de los derechos de toda la comunidad del territorio del Municipio de '+M+' ('+Dp+').']].flatMap((t,i)=>[(i+1)+') ',...t,' '])),
+  P(b('CLÁUSULA SEGUNDA: ALCANCE. '),'El alcance del objeto del contrato obliga al contratista a desarrollar todas las obligaciones y actividades detalladas para la óptima y eficaz operación de la entidad contratante, teniendo el siguiente alcance: ',...[...c.p.alcances.map(t=>[x(t,'alcances')]),['Repercute indirectamente en la eficiente garantía de los derechos de toda la comunidad del territorio del Municipio de '+M+' ('+Dp+').']].flatMap((t,i)=>[(i+1)+') ',...t,' '])),
   P(b('CLÁUSULA TERCERA: LUGAR DE EJECUCIÓN. '),'EL CONTRATISTA se obliga a prestar los servicios contratados en el municipio de ',M,' (',Dp,'), su jurisdicción rural y urbana.'),
   P(b('CLÁUSULA CUARTA: DURACIÓN DEL CONTRATO. '),'El presente contrato tendrá un plazo estimado de duración de ',x(c.plazoL,'plazo'),', el cual empezará a contarse desde la suscripción del acta de inicio que se suscribirá una vez se haya acreditado el cumplimiento de los requisitos para su ejecución.'),
   P(b('CLÁUSULA QUINTA: VALOR DEL CONTRATO Y FORMA DE PAGO. '),'El valor del contrato es por la suma de ',x(c.valL,'valor'),', que la ',E,' pagará en ',...pago,', después de radicación de informe de gestión, cuenta de cobro y anexando la seguridad social correspondiente, previo certificado por el supervisor del contrato designado para el caso, y estas serán canceladas dentro de los diez (10) días calendario siguientes a su radicación en la tesorería de la entidad contratante. ',b('PARÁGRAFO PRIMERO: '),'En caso de terminación anticipada o ejecución parcial del contrato, solo habrá lugar al pago proporcional de los productos o actividades acabados y entregados a satisfacción por el contratista a la ',E,'. ',b('PARÁGRAFO SEGUNDO: '),'Del valor de los honorarios pactados se harán los descuentos de ley e impuestos municipales pertinentes.'),
-  P(b('CLÁUSULA SEXTA: OBLIGACIONES DEL CONTRATISTA. '),'El contratista, en desarrollo del objeto del presente contrato, se obliga para lograr que se materialicen los productos finales descritos en el alcance de este, cumplir con la obtención y aprobación de los siguientes productos parciales, por cada componente: ',...ob.flatMap((t,i)=>[(i+1)+') ',...t,' ']),b('PARÁGRAFO I: '),'Que las actividades profesionales, de apoyo y logística anteriormente descritas se realizarán bajo estricta supervisión y aprobación de la ',x(c.sup.c),'.'),
+  P(b('CLÁUSULA SEXTA: OBLIGACIONES DEL CONTRATISTA. '),'El contratista, en desarrollo del objeto del presente contrato, se obliga para lograr que se materialicen los productos finales descritos en el alcance de este, cumplir con la obtención y aprobación de los siguientes productos parciales, por cada componente: ',...ob.flatMap((t,i)=>[(i+1)+') ',...t,' ']),b('PARÁGRAFO I: '),'Que las actividades profesionales, de apoyo y logística anteriormente descritas se realizarán bajo estricta supervisión y aprobación de la ',x(c.sup.c,'supervisor'),'.'),
   P(b('CLÁUSULA SÉPTIMA: DERECHOS Y OBLIGACIONES DEL CONTRATANTE. '),'En virtud del presente contrato, el CONTRATANTE se obliga a: ',...D.general.contratante.map((t,i)=>(i<D.general.contratante.length-1?(i+1)+') ':'')+t+' ')),
-  P(b('CLÁUSULA OCTAVA: SUPERVISIÓN. '),'La vigilancia y control de cumplimiento de las obligaciones a cargo del CONTRATISTA serán ejercidas por la ',x(c.sup.c),' de la ',E,' CONTRATANTE o el empleado público que se designe para tal fin, quienes serán responsables de aprobar los pagos o desembolsos, los informes que presente EL CONTRATISTA, de proyectar el acta de liquidación definitiva del contrato, en caso de ser necesario y en general cumplir con las obligaciones señaladas en la normatividad vigente y en el Manual de Contratación de la Entidad. En los contratos que involucren la entrega de recursos para administración de terceros, se debe identificar una supervisión interdisciplinaria para el adecuado seguimiento presupuestal, técnico y jurídico.'),
+  P(b('CLÁUSULA OCTAVA: SUPERVISIÓN. '),'La vigilancia y control de cumplimiento de las obligaciones a cargo del CONTRATISTA serán ejercidas por la ',x(c.sup.c,'supervisor'),' de la ',E,' CONTRATANTE o el empleado público que se designe para tal fin, quienes serán responsables de aprobar los pagos o desembolsos, los informes que presente EL CONTRATISTA, de proyectar el acta de liquidación definitiva del contrato, en caso de ser necesario y en general cumplir con las obligaciones señaladas en la normatividad vigente y en el Manual de Contratación de la Entidad. En los contratos que involucren la entrega de recursos para administración de terceros, se debe identificar una supervisión interdisciplinaria para el adecuado seguimiento presupuestal, técnico y jurídico.'),
   P(b('CLÁUSULA NOVENA: IMPUTACIÓN PRESUPUESTAL. '),'Los pagos de dinero que asume el CONTRATANTE en virtud del presente contrato, se sujetan a las apropiaciones presupuestales respectivas y se pagarán con recursos del presupuesto General del ',...cdp,', expedido por el Encargado de Presupuesto de la Entidad. El valor que el CONTRATANTE se compromete a pagar en dinero por el presente contrato se imputará al presupuesto de vigencia fiscal ',anio,'. De dicho valor se descontará el monto de los impuestos y demás acreencias generadas por la celebración o ejecución del contrato, conforme a lo dispuesto en las normas vigentes.'),
   P(b('CLÁUSULA DÉCIMA: GARANTÍAS. '),'La administración de la ',E,', considera que dada la cuantía y el objeto del contrato a celebrar no se requerirá de la exigencia de garantías atendiendo lo normado el inciso 5 del Artículo 7 de la Ley 1150 del 16 de julio de 2007 en armonía con el 2.2.1.2.1.4.5 del Decreto 1082 de 2015, y lo planteado en el estudio de oportunidad y conveniencia. Sumado a lo anterior, no se exigirá la constitución de garantías por ser las obligaciones y forma de pago de tracto sucesivo y para obtener el pago de las actividades o gestión realizada, previamente se requiere certificación del cabal cumplimiento de las obligaciones debidamente supervisadas.'),
   P(b('CLÁUSULA DÉCIMA PRIMERA: MULTAS. '),'En caso de mora o incumplimiento parcial de las obligaciones que en desarrollo de este contrato contrae EL CONTRATISTA, la ',E,' podrá imponerle mediante resolución motivada en calidad de multa, sanciones pecuniarias equivalentes al uno por ciento (1%) del valor del Contrato, las cuales sumada entre sí, no podrán exceder el diez por ciento (10%) de dicho valor, salvo casos de fuerza mayor o casos fortuitos. ',b('PARÁGRAFO: '),'Contra la resolución que imponga la multa procederá el recurso de reposición ante el mismo funcionario que la expidió.'),
@@ -244,14 +247,14 @@ function bloques(k,c){
   P(b('CLÁUSULA VIGÉSIMA NOVENA: DOCUMENTOS. '),'Forman parte integrante del presente contrato los siguientes documentos: a) Requerimiento de Necesidad, Solicitud de CDP, Certificado de Disponibilidad Presupuestal CDP, Estudios Previos, Certificación de idoneidad. b) Verificación por parte la E.S.E Hospital Local ',M,' de los Antecedentes Disciplinarios en la página web de la Procuraduría General de La Nación, Boletín de Responsabilidad Fiscal en la página web de la Contraloría General de la República y los Antecedentes Judiciales en la Página Web de la Policía Nacional de Colombia (www.policia.gov.co) en el link (Consulta de Antecedentes Judiciales) y Registro Único Tributario RUT. c) Formato Único de Hoja de Vida del Departamento Administrativo de la Función Pública (Persona Natural) con todos sus anexos. d) Propuesta del contratista con sus anexos técnicos. e) Los demás documentos exigidos por la ley que directa o indirectamente se relacionen con este contrato y con la ejecución del mismo.'),
   P(b('CLÁUSULA TRIGÉSIMA: INDEMNIDAD. '),'EL CONTRATISTA, se obliga a mantener indemne a LA ',E,', de cualquier reclamación proveniente de terceros, debida o por el cumplimiento del presente contrato.'),
   P('Para constancia, el presente contrato se firma por las partes el día ',x(c.fsusL,'fecha de suscripción'),', en dos (02) ejemplares del mismo tenor y efecto legal, ',M,' – ',Dp,'.'),
-  FIR([[b('CONTRATANTE')],[xb(AJ.gerente)],['GERENTE E.S.E. '+M.toUpperCase()]],[[b('CONTRATISTA')],[xb(S.nombre,'nombre')],[x(c.doc,'documento')]]),
+  FIR([[b('CONTRATANTE')],[xb(AJ.gerente,'gerente')],['GERENTE E.S.E. '+M.toUpperCase()]],[[b('CONTRATISTA')],[xb(S.nombre,'nombre')],[x(c.doc,'documento')]]),
   NOTA('Proyectó y elaboró: ',AJ.proyecto)];
 
  case 'act':return[
   TIT('ACTA DE INICIO'),
-  TBL([[b('CONTRATANTE'),E],[b('NIT'),AJ.nit],[b('CONTRATISTA'),[xb(S.nombre,'nombre')]],[b('NIT/C.C.'),[x(cc(S.ndoc),'documento')]],[b('No. DE CONTRATO'),[xb(c.num,'No. contrato')]],[b('OBJETO'),[obj]],[b('VALOR TOTAL'),[x(c.valL,'valor')]],[b('NÚMERO DE CDP'),['CDP # ',x(S.cdp,'No. CDP')]],[b('NÚMERO DE R.P.'),['R.P. # ',x(S.rp,'No. RP')]],[b('SUPERVISIÓN'),[x(c.sup.c),' O QUIEN HAGA SUS VECES']],[b('PLAZO DE EJECUCIÓN'),[x(c.plazoL,'plazo')]]],[30,70]),
-  P('En el Municipio de ',M,' (',Dp,'), se reunieron ',xb(c.sup.n),', ',c.sup.c.charAt(0)+c.sup.c.slice(1).toLowerCase(),' en calidad de Supervisora y ',...persona,', que en adelante se denominará ',c.tr.al,', para la firma del Acta de Inicio del contrato No. ',xb(c.num,'No. contrato'),', con Objeto ',obj,' dentro de las instalaciones de la entidad, ubicada en el Municipio de ',M,' (',Dp,'). Para mayor constancia el presente documento se firma el día ',x(c.fsusL,'fecha de suscripción'),'.'),
-  FIR([[xb(c.sup.n)],[c.sup.c],[b('SUPERVISOR')]],[[xb(S.nombre,'nombre')],[x(c.doc,'documento')],[b('CONTRATISTA')]])];
+  TBL([[b('CONTRATANTE'),E],[b('NIT'),AJ.nit],[b('CONTRATISTA'),[xb(S.nombre,'nombre')]],[b('NIT/C.C.'),[x(cc(S.ndoc),'documento')]],[b('No. DE CONTRATO'),[xb(c.num,'No. contrato')]],[b('OBJETO'),[obj]],[b('VALOR TOTAL'),[x(c.valL,'valor')]],[b('NÚMERO DE CDP'),['CDP # ',x(S.cdp,'No. CDP')]],[b('NÚMERO DE R.P.'),['R.P. # ',x(S.rp,'No. RP')]],[b('SUPERVISIÓN'),[x(c.sup.c,'supervisor'),' O QUIEN HAGA SUS VECES']],[b('PLAZO DE EJECUCIÓN'),[x(c.plazoL,'plazo')]]],[30,70]),
+  P('En el Municipio de ',M,' (',Dp,'), se reunieron ',xb(c.sup.n,'supervisor'),', ',c.sup.c.charAt(0)+c.sup.c.slice(1).toLowerCase(),' en calidad de Supervisora y ',...persona,', que en adelante se denominará ',c.tr.al,', para la firma del Acta de Inicio del contrato No. ',xb(c.num,'No. contrato'),', con Objeto ',obj,' dentro de las instalaciones de la entidad, ubicada en el Municipio de ',M,' (',Dp,'). Para mayor constancia el presente documento se firma el día ',x(c.fsusL,'fecha de suscripción'),'.'),
+  FIR([[xb(c.sup.n,'supervisor')],[c.sup.c],[b('SUPERVISOR')]],[[xb(S.nombre,'nombre')],[x(c.doc,'documento')],[b('CONTRATISTA')]])];
  }
  return[];
 }
