@@ -62,5 +62,7 @@ html = (plantilla.replace("<!--LIBS-->", libs)
 salida = RAIZ / "dist" / "index.html"
 salida.parent.mkdir(exist_ok=True)
 salida.write_text(html, encoding="utf-8")
+# Imagen que muestran WhatsApp, Facebook, Teams… al compartir el enlace.
+(salida.parent / "vista-previa.png").write_bytes((RAIZ / "assets" / "vista-previa.png").read_bytes())
 print(f"Listo: {salida}  ({len(datos['perfiles'])} perfiles, {len(datos['usados'])} contratos usados, "
       f"{salida.stat().st_size / 1e6:.1f} MB)")
