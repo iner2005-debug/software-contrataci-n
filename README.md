@@ -58,7 +58,7 @@ El repositorio trae `.github/workflows/pages.yml`, que arma y publica el softwar
 
 1. Cree el repositorio en GitHub y suba el proyecto.
 2. En el repositorio: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Cada vez que suba un cambio a `main`, en unos minutos la página queda en `https://iner2005-debug.github.io/software-contrataci-n/`.
+3. Cada vez que suba un cambio a `main`, en unos minutos la página queda en `https://iner2005-debug.github.io/software-contratacion-/`.
 
 > **Datos personales.** Este repositorio es público. Por eso los ejemplos del catálogo usan personas y cédulas **inventadas**, y los expedientes reales (`docs/expedientes_originales/`) **no se suben**: están en `.gitignore` y se guardan solo en el computador de contratación. Los contratistas registrados en el programa tampoco se suben, porque viven solo en el navegador.
 

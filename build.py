@@ -58,7 +58,7 @@ codigo = app.replace("__DATA__", js_seguro(json.dumps(datos, ensure_ascii=False,
             .replace("__ASSETS__", json.dumps(assets, separators=(",", ":")))
 # Dirección pública de la página: en GitHub Actions sale del nombre real del
 # repositorio, así que si se renombra el repositorio se actualiza sola.
-dueno, repo = os.environ.get("GITHUB_REPOSITORY", "iner2005-debug/software-contratacion").split("/")
+dueno, repo = os.environ.get("GITHUB_REPOSITORY", "iner2005-debug/software-contratacion-").split("/")
 url = f"https://{dueno.lower()}.github.io/{repo}/"
 html = (plantilla.replace("__URL__", url).replace("<!--LIBS-->", libs)
         .replace("__MEMBRETE_SUP__", img_sup).replace("__MEMBRETE_INF__", img_inf)
