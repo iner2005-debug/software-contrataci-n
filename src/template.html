@@ -86,6 +86,19 @@ input.bad{border-color:var(--red);background:var(--redbg)}
 .files li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .files em{font-style:normal;font-size:12px;font-weight:700;background:var(--yd);padding:3px 8px;border-radius:5px;white-space:nowrap}
 .note{font-size:13px;color:var(--mut)}
+/* vigencia y forma de pago */
+.q{font-weight:700;font-size:15px;margin:18px 0 6px}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.seg button{font:600 14px Manrope,sans-serif;min-height:42px;padding:6px 8px;border-radius:8px;border:1px solid light-dark(#b9c0c9,#3b4552);background:var(--bg);color:var(--ink);cursor:pointer;line-height:1.2}
+.seg button[aria-checked=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+[data-show][hidden]{display:none!important}
+.eco{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--panel);font-size:13.5px;line-height:1.45}
+.eco:empty{display:none}.eco b{font-weight:700}.eco.mal{background:var(--redbg);color:var(--red)}.eco.bien{border-left:3px solid var(--ok)}
+.eco .btn{margin-top:6px}
+.pagos{display:grid;gap:6px;margin:8px 0}
+.pago{display:grid;grid-template-columns:72px minmax(0,1fr) 40px;gap:6px;align-items:center}
+.pago span{font-size:13px;font-weight:600;color:var(--mut)}
+.pago button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--mut);font-size:18px;cursor:pointer}
 /* formulario y documento a la vez */
 .vista{display:none}
 @media(min-width:901px){.desk{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}}
@@ -171,24 +184,47 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
     </details>
    </fieldset>
 
-   <fieldset><legend><span>3</span>Contrato y presupuesto</legend>
-    <div class="row">
-     <div><label for="meses">Plazo (meses)</label><input id="meses" type="number" min="1" max="12"></div>
-     <div><label for="valor">Valor total ($)</label><input id="valor" inputmode="numeric"></div>
+   <fieldset><legend><span>3</span>Valor, vigencia y forma de pago</legend>
+    <label for="valor">Valor total del contrato ($)</label><input id="valor" inputmode="numeric" placeholder="18400000">
+    <p class="eco" id="ecoValor"></p>
+
+    <p class="q" id="q-vig">¿Cuánto dura el contrato?</p>
+    <input type="hidden" id="vmodo">
+    <div class="seg" data-seg="vmodo" role="radiogroup" aria-labelledby="q-vig">
+     <button type="button" role="radio" data-v="meses">Meses</button><button type="button" role="radio" data-v="dias">Meses y días</button><button type="button" role="radio" data-v="fechas">Entre dos fechas</button><button type="button" role="radio" data-v="texto">Otro texto</button>
     </div>
+    <div class="row" data-show="vmodo:meses vmodo:dias">
+     <div><label for="meses">Meses</label><input id="meses" type="number" min="0" max="24" inputmode="numeric"></div>
+     <div data-show="vmodo:dias"><label for="vdias">Días</label><input id="vdias" type="number" min="0" max="30" inputmode="numeric"></div>
+    </div>
+    <div class="row" data-show="vmodo:fechas">
+     <div><label for="vini">Desde</label><input id="vini" type="date"></div>
+     <div><label for="vfin">Hasta</label><input id="vfin" type="date"></div>
+    </div>
+    <div data-show="vmodo:texto"><label for="vigt">Escriba la vigencia como debe salir</label><input id="vigt" placeholder="Ej.: UN (01) MES O HASTA CUMPLIR EL OBJETO CONTRACTUAL"></div>
+    <p class="eco" id="ecoVig"></p>
+
+    <p class="q" id="q-pago">¿Cómo se paga?</p>
+    <input type="hidden" id="pmodo"><input type="hidden" id="pagos">
+    <div class="seg" data-seg="pmodo" role="radiogroup" aria-labelledby="q-pago">
+     <button type="button" role="radio" data-v="iguales">Cuotas iguales</button><button type="button" role="radio" data-v="unico">Un solo pago</button><button type="button" role="radio" data-v="varios">Pagos diferentes</button><button type="button" role="radio" data-v="texto">Otro texto</button>
+    </div>
+    <div data-show="pmodo:iguales"><label for="ncuotas">Número de cuotas</label><input id="ncuotas" type="number" min="1" max="24" inputmode="numeric" style="max-width:200px"></div>
+    <div data-show="pmodo:varios"><div class="pagos" id="pagosUI"></div><button type="button" class="btn sm" id="addPago">+ Agregar pago</button></div>
+    <div data-show="pmodo:texto"><label for="pagot">Escriba la forma de pago como debe salir</label><input id="pagot" placeholder="Ej.: una cuota por el total de atenciones realizadas"></div>
+    <p class="eco" id="ecoPago"></p>
+   </fieldset>
+
+   <fieldset><legend><span>4</span>Presupuesto y número</legend>
     <div class="row">
      <div><label for="cdp">No. CDP</label><input id="cdp" placeholder="2026.CEN.01.000868"></div>
      <div><label for="rp">No. RP</label><input id="rp"></div>
     </div>
-    <label for="vigt">Vigencia en texto (opcional)</label><input id="vigt" placeholder="Ej.: DESDE EL 21 DE SEPTIEMBRE HASTA EL 31 DE OCTUBRE DE 2026">
-    <p class="hint" style="margin:4px 0 0">Solo si la vigencia no es en meses completos. Si se deja vacío, se escribe el plazo en meses.</p>
-    <label for="pagot">Forma de pago en texto (opcional)</label><input id="pagot" placeholder="Ej.: tres (03) pagos, uno de $1.000.000 y dos de $2.000.000">
-    <p class="hint" style="margin:4px 0 0">Solo si los pagos no son cuotas mensuales iguales.</p>
     <label for="consec">Consecutivo del contrato</label><input id="consec" type="number" min="1">
     <div class="calc" id="calc"></div>
    </fieldset>
 
-   <fieldset><legend><span>4</span>Fechas</legend>
+   <fieldset><legend><span>5</span>Fechas</legend>
     <div class="row">
      <div><label for="fnec">Requerimiento de necesidad</label><input id="fnec" type="date"></div>
      <div><label for="fcdp">Fecha del CDP</label><input id="fcdp" type="date"></div>

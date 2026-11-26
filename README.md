@@ -26,8 +26,13 @@ Abra `dist/index.html` en Chrome o Edge. En **Nuevo contrato**:
 
 1. Elija el perfil.
 2. Digite la cédula. Si la persona ya está registrada, el resto de sus datos se llena solo.
-3. Complete valor, plazo, CDP, RP, consecutivo y fechas.
-4. Pulse **Generar Word / PDF / Imprimir…** y elija:
+3. Escriba el valor y elija con los botones:
+   - **¿Cuánto dura?** Meses · Meses y días · Entre dos fechas · Otro texto.
+   - **¿Cómo se paga?** Cuotas iguales · Un solo pago · Pagos diferentes · Otro texto.
+
+   Debajo aparece **"Así queda en el documento: …"** con el texto ya redactado. Si las cuotas no dan exactas, o los pagos no suman el total, el programa avisa y ofrece un botón para arreglarlo.
+4. Complete CDP, RP, consecutivo y fechas.
+5. Pulse **Generar Word / PDF / Imprimir…** y elija:
    - qué documentos (todos o algunos);
    - cómo los quiere: **PDF**, **Word**, **Word y PDF** o **Imprimir ahora**;
    - en un solo archivo (todo seguido) o un archivo por documento (en un `.zip`).

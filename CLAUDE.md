@@ -5,7 +5,7 @@ Generador de expedientes de contratación directa (prestación de servicios) par
 
 ## Cómo está armado
 - `src/template.html`: HTML + CSS. Marcadores: `<!--LIBS-->` (librerías de vendor/), `/*SCRIPT*/` (código), `__MEMBRETE_SUP__`/`__MEMBRETE_INF__` (imágenes de la vista previa).
-- Código en `src/`, unido en este orden y en un mismo bloque: `app.js` (formulario, compute, checks, catálogo, ajustes, guardado, diálogo Generar), `documentos.js` (texto de los 7 documentos como bloques), `exportar.js` (vista previa HTML, Word con JSZip sobre `assets/rotulo.docx`, PDF con pdfmake con `assets/membrete.jpg` de fondo), `contratistas.js` (registro por cédula), `edicion.js` (el documento sigue a la casilla que se está llenando; botón "✎ Editar" en cada dato resaltado que lleva a su casilla; alternar Formulario/Documento en celular), `inicio.js` (arranque).
+- Código en `src/`, unido en este orden y en un mismo bloque: `app.js` (formulario, compute, checks, catálogo, ajustes, guardado, diálogo Generar), `documentos.js` (texto de los 7 documentos como bloques), `exportar.js` (vista previa HTML, Word con JSZip sobre `assets/rotulo.docx`, PDF con pdfmake con `assets/membrete.jpg` de fondo), `contratistas.js` (registro por cédula), `vigencia.js` (vigencia y forma de pago: modos con botones, redacta el texto y valida), `edicion.js` (el documento sigue a la casilla que se está llenando; botón "✎ Editar" en cada dato resaltado que lleva a su casilla; alternar Formulario/Documento en celular), `inicio.js` (arranque).
 - `app.js` tiene `__DATA__` (catálogo) y `__ASSETS__` (membrete, plantilla docx, fuentes en base64).
 - `build.py` une todo en `dist/index.html` (~4 MB, sin dependencias externas). **Nunca editar `dist/` a mano.**
 - Un documento = lista de bloques `TIT/SEC/P/PC/PI/UL/TBL/FIR/NOTA`; piezas: texto, `b()` negrilla, `x(valor,'etiqueta')`/`xb()` dato variable (si falta sale "falta: …" en rojo). La etiqueta debe estar en `FX` (documentos.js), que dice de qué casilla sale el dato: id del formulario, `cat:campo` o `aj:campo`. Los tres formatos salen de los mismos bloques.
@@ -26,7 +26,9 @@ Generador de expedientes de contratación directa (prestación de servicios) par
 - Número de contrato = prefijo + fecha de suscripción (AAAAMMDD) + consecutivo de 2 dígitos.
 - Valores en letras: función `pesos()`; "UN MILLÓN DE PESOS" lleva "DE" solo si el valor termina en millones exactos.
 - Fechas en letras: "primero (01) del mes de septiembre del año dos mil veintiséis (2026)".
-- Si hay `vigTexto` o `pagoTexto`, reemplazan el plazo en meses o la frase de cuotas iguales en los documentos.
+- Vigencia (`vmodo`): `meses` | `dias` (meses + vdias) | `fechas` (vini–vfin → "DESDE EL 21 DE SEPTIEMBRE HASTA EL 31 DE OCTUBRE DE 2026") | `texto` (vigt).
+- Forma de pago (`pmodo`): `iguales` (ncuotas; vacío = una por mes de vigencia; debe dividir exacto) | `unico` | `varios` (`pagos` = JSON de valores; deben sumar el total) | `texto` (pagot). Si no hay modo guardado (datos viejos), se deduce: texto si hay vigt/pagot.
+- Perfiles: `vigTexto`/`pagoTexto` (texto libre sugerido) o `vigSug`/`pagoSug` (sugerencia estructurada, p. ej. `{"pmodo":"varios","pagos":[1000000,2000000]}`).
 
 ## Almacenamiento (todo en localStorage del navegador)
 - `contratacion-hlmlb-v1`: catálogo, ajustes y formulario en curso. "Volver al original" lo borra.

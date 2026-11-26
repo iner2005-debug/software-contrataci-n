@@ -8,7 +8,7 @@
    ============================================================ */
 const KC='contratacion-hlmlb-contratistas-v1';
 const PERS=['nombre','tdoc','sexo','tel','correo','dir','exped'];
-const CONTR=['perfil','meses','valor','vigt','pagot','cdp','rp','consec','fnec','fcdp','fsus'];
+const CONTR=['perfil','valor','vmodo','meses','vdias','vini','vfin','vigt','pmodo','ncuotas','pagos','pagot','cdp','rp','consec','fnec','fcdp','fsus'];
 let REG={},regErr=false,fichaK='',ctSel='';
 const ced=s=>String(s||'').replace(/\D/g,'');
 function cargarReg(){try{REG=JSON.parse(localStorage.getItem(KC)||'{}')||{}}catch(e){REG={}}}
@@ -54,7 +54,7 @@ function buscarCedula(forzar){
    ${u?`<button type="button" class="btn sm" id="repetir" title="Usa el mismo perfil, valor, plazo y forma de pago del último contrato">Repetir último contrato</button>`:''}</div>
    ${datosPersona(p)}${tablaContratos(p,'form')}`;
   if(u)$('repetir').onclick=()=>{if(!D.perfiles.some(z=>z.id===u.perfil))return alert('El perfil de ese contrato ya no existe en el catálogo.');
-   $('perfil').value=u.perfil;read();set({meses:u.meses,valor:u.valor,vigt:u.vigt,pagot:u.pagot,cdp:'',rp:'',consec:nextConsec(),fnec:'',fcdp:'',fsus:''});
+   $('perfil').value=u.perfil;read();const o={cdp:'',rp:'',consec:nextConsec(),fnec:'',fcdp:'',fsus:''};['valor','vmodo','meses','vdias','vini','vfin','vigt','pmodo','ncuotas','pagos','pagot'].forEach(k=>o[k]=u[k]??'');set(o);
    $('cdp').focus()};
   render();
  }

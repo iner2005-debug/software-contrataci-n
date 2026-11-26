@@ -10,7 +10,7 @@ const AJ={entidad:'EMPRESA SOCIAL DEL ESTADO HOSPITAL LOCAL MARIA LA BAJA',nit:'
 const AJL={entidad:'Nombre de la entidad',nit:'NIT',municipio:'Municipio',depto:'Departamento',direccion:'Dirección para propuestas',gerente:'Gerente (representante legal)',gerCc:'Cédula de la gerente',gerExp:'Lugar de expedición',gerDecreto:'Decreto de nombramiento',gerActa:'Acta de posesión',
  supAdm:'Subgerente administrativa (firma necesidad e idoneidad)',supAdmCargo:'Cargo',supCie:'Subgerente científica (supervisa perfiles asistenciales)',supCieCargo:'Cargo',manual:'Manual de contratación',manualFecha:'Fecha del manual de contratación',proyecto:'Proyectó y elaboró (pie del contrato)',prefijo:'Prefijo del número de contrato',smmlv:'SMMLV vigente ($)',usados:'Números de contrato ya usados'};
 if(D.ajustes)Object.keys(AJ).forEach(k=>{if(k!=='usados'&&D.ajustes[k]!=null)AJ[k]=D.ajustes[k]});
-const F=['perfil','nombre','tdoc','ndoc','sexo','exped','tel','correo','dir','meses','valor','vigt','pagot','cdp','rp','consec','fnec','fcdp','fsus'];
+const F=['perfil','nombre','tdoc','ndoc','sexo','exped','tel','correo','dir','valor','vmodo','meses','vdias','vini','vfin','vigt','pmodo','ncuotas','pagos','pagot','cdp','rp','consec','fnec','fcdp','fsus'];
 
 /* número a letras */
 const U=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve'];
@@ -36,25 +36,29 @@ const PA=()=>D.perfiles.find(p=>p.id===S.perfil)||D.perfiles[0];
 const SUP=p=>p.supervisor==='cie'?{n:AJ.supCie,c:AJ.supCieCargo}:{n:AJ.supAdm,c:AJ.supAdmCargo};
 
 function compute(){
- const p=PA(),val=Number(String(S.valor).replace(/\D/g,''))||0,m=Number(S.meses)||0;
- const cuota=m?val/m:0,f=pd(S.fsus);
+ const p=PA(),val=Number(String(S.valor).replace(/\D/g,''))||0,f=pd(S.fsus);
+ const vig=vigencia(),pg=formaPago(val,vig);
  const num=(S.consec&&f)?`${AJ.prefijo}-${f.y}${String(f.m).padStart(2,'0')}${String(f.d).padStart(2,'0')}-${String(S.consec).padStart(2,'0')}`:'';
  const tr=S.sexo==='f'?{sr:'la señora',id:'identificada',al:'la CONTRATISTA',inc:'incursa'}:S.sexo==='m'?{sr:'el señor',id:'identificado',al:'el CONTRATISTA',inc:'incurso'}:{sr:'el (la) señor (a)',id:'identificado (a)',al:'el (la) CONTRATISTA',inc:'incurso (a)'};
  const obl=[...D.general.contratistaIni,...p.obligaciones,...D.general.contratistaFin];
- const vt=String(S.vigt||'').trim().toUpperCase();
- return{p,val,m,cuota,num,tr,obl,sup:SUP(p),anio:f?f.y:'',
-  valL:val?pesos(val)+' '+money(val):'',cuotaL:cuota?pesos(Math.round(cuota)).replace(' M/CTE.','').toLowerCase()+' m/cte. ('+money(cuota)+')':'',
-  plazoL:vt||(m?plazo(m):''),cuotasL:m?ap(letras(m))+' ('+String(m).padStart(2,'0')+')':'',fnecL:fechaL(S.fnec),fsusL:fechaL(S.fsus),fcdpC:fechaC(S.fcdp),
+ return{p,val,vig,pg,num,tr,obl,sup:SUP(p),anio:f?f.y:'',
+  valL:val?pesos(val)+' '+money(val):'',plazoL:vig.texto,pagoTxt:pg.texto,cuotasIguales:pg.modo==='iguales',fnecL:fechaL(S.fnec),fsusL:fechaL(S.fsus),fcdpC:fechaC(S.fcdp),
   doc:S.ndoc?`${S.tdoc} N° ${cc(S.ndoc)}`:''};
 }
 
 function checks(c){
- const L=[],req=[['nombre','Nombre del contratista'],['ndoc','Número de documento'],['meses','Plazo'],['valor','Valor'],['cdp','No. CDP'],['rp','No. RP'],['consec','Consecutivo'],['fnec','Fecha de necesidad'],['fcdp','Fecha del CDP'],['fsus','Fecha de suscripción']];
+ const L=[],req=[['nombre','Nombre del contratista'],['ndoc','Número de documento'],['valor','Valor'],['cdp','No. CDP'],['rp','No. RP'],['consec','Consecutivo'],['fnec','Fecha de necesidad'],['fcdp','Fecha del CDP'],['fsus','Fecha de suscripción']];
  const miss=req.filter(([k])=>!String(S[k]??'').trim());
+ const campoVig={meses:'meses',dias:'meses',fechas:S.vini?'vfin':'vini',texto:'vigt'}[c.vig.modo],campoPago={iguales:'ncuotas',varios:'pagos',texto:'pagot'}[c.pg.modo];
+ if(c.vig.falta)miss.push([campoVig,c.vig.falta]);if(c.pg.falta&&c.val)miss.push([campoPago,c.pg.falta]);
  F.forEach(k=>{const el=$(k);if(el)el.classList.toggle('bad',miss.some(x=>x[0]===k))});
  L.push(miss.length?['err','Faltan '+miss.length+' datos: '+miss.map(x=>x[1]).join(', ')]:['','Todos los datos obligatorios están completos']);
- if(S.pagot&&String(S.pagot).trim())L.push(['warn','Forma de pago especial: verifique que los pagos sumen '+money(c.val)]);
- else if(c.val&&c.m){const ex=c.val%c.m===0;L.push(ex?['',`Cuotas exactas: ${c.m} × ${money(c.cuota)}`]:[S.vigt?'warn':'err',`El valor no se divide en cuotas iguales: ${money(c.cuota)} por mes`+(S.vigt?' (vigencia por fechas: revise la forma de pago)':'')])}
+ if(c.vig.error)L.push(['err','Vigencia: '+c.vig.error]);
+ else if(c.vig.modo==='fechas'&&S.fsus&&S.vini&&S.vini<S.fsus)L.push(['warn','La vigencia empieza antes de la fecha de suscripción']);
+ if(c.val&&!c.pg.falta){if(c.pg.error)L.push(['err','Forma de pago: '+c.pg.error]);
+  else if(c.pg.modo==='iguales')L.push(['',c.pg.n===1?`Un solo pago de ${money(c.val)}`:`Cuotas exactas: ${c.pg.n} × ${money(c.pg.cuota)}`]);
+  else if(c.pg.modo==='varios')L.push(['',`Los ${c.pg.n} pagos suman exactamente ${money(c.val)}`]);
+  else if(c.pg.modo==='texto')L.push(['warn','Forma de pago escrita a mano: verifique que sume '+money(c.val)]);}
  if(c.val){const tope=28*AJ.smmlv;L.push(c.val<=tope?['',`Dentro del tope de contratación directa (28 SMMLV = ${money(tope)})`]:['err',`Supera 28 SMMLV (${money(tope)})`])}
  if(S.ndoc&&!/^\d{5,11}$/.test(String(S.ndoc).replace(/\D/g,'')))L.push(['err','El número de documento no parece válido']);
  if(S.cdp&&!/^\d{4}\.CEN\.\d{2}\.\d{6}$/i.test(S.cdp.trim()))L.push(['warn','El número de CDP no tiene el formato AAAA.CEN.00.000000']);
@@ -71,7 +75,7 @@ function calcBox(c){
  $('calc').innerHTML=`<small>Calculado automáticamente</small>
  <div><span>No. contrato</span><b>${esc(c.num||'—')}</b></div>
  <div><span>Valor en letras</span><b>${esc(c.val?pesos(c.val):'—')}</b></div>
- <div><span>Cuota mensual</span><b>${esc(String(S.pagot||'').trim()?'Pago especial':c.cuota?money(c.cuota):'—')}</b></div>
+ <div><span>Pago</span><b>${esc(!c.val||c.pg.falta?'—':c.pg.modo==='iguales'?(c.pg.n===1?'Un solo pago':`${c.pg.n} cuotas de ${money(c.pg.cuota)}`):c.pg.modo==='unico'?'Un solo pago':c.pg.modo==='varios'?`${c.pg.n} pagos diferentes`:'Texto propio')}</b></div>
  <div><span>Vigencia</span><b>${esc(c.plazoL||'—')}</b></div>
  <div><span>Rubro</span><b>${esc(c.p.rubro)}</b></div>
  <div><span>Supervisa</span><b>${esc(c.sup.c)}</b></div>`;
@@ -82,7 +86,7 @@ function renderTabs(){$('doctabs').innerHTML=DOCLIST.map(([k,n])=>`<button type=
 function render(){const c=compute();calcBox(c);checks(c);$('paper').innerHTML=aHTML(bloques(doc,c))}
 function read(){F.forEach(k=>S[k]=$(k).value)}
 function set(o){Object.entries(o).forEach(([k,x])=>{if($(k))$(k).value=x??''});read();render();guardar()}
-function sugerir(p){set({meses:p.mesesSug,valor:p.valorSug,vigt:p.vigTexto||'',pagot:p.pagoTexto||''})}
+function sugerir(p){set(sugPerfil(p))}
 
 function renderPerfilSel(){
  const g={};D.perfiles.forEach(p=>(g[p.tipo]=g[p.tipo]||[]).push(p));
@@ -95,7 +99,7 @@ function renderPerfilSel(){
 
 $('f').addEventListener('input',e=>{if(e.target.id==='perfil')return;read();if(e.target.id==='ndoc')buscarCedula();render();guardar()});
 $('perfil').addEventListener('change',()=>{read();sugerir(PA())});
-$('ejload').onclick=()=>{const p=PA(),e=p.ejemplo||{};set({...e,consec:nextConsec(),meses:p.mesesSug,valor:p.valorSug,vigt:p.vigTexto||'',pagot:p.pagoTexto||''});buscarCedula()};
+$('ejload').onclick=()=>{const p=PA(),e=p.ejemplo||{};set({...e,consec:nextConsec(),...sugPerfil(p)});buscarCedula()};
 $('vaciar').onclick=()=>{set({nombre:'',ndoc:'',sexo:'',exped:'',tel:'',correo:'',dir:'',cdp:'',rp:'',consec:nextConsec(),fnec:'',fcdp:'',fsus:''});buscarCedula()};
 $('doctabs').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;doc=b.dataset.d;renderTabs();render()});
 function irA(v){document.querySelectorAll('.tabs [data-v]').forEach(x=>x.setAttribute('aria-selected',x.dataset.v===v));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));if(v==='contratistas')renderCt()}
@@ -167,7 +171,7 @@ function renderCat(){const i=catI,p=D.perfiles[i];$('cat').innerHTML=`<div class
  ${TA(i,'consideraciones','Consideraciones específicas (una por línea)',90)}
  <label for="c-idoneidad">Requisito adicional de idoneidad</label><input id="c-idoneidad" data-k="idoneidad" value="${esc(p.idoneidad)}" placeholder="Ej.: y título profesional en Derecho"></div>`;
  renderPtab()}
-function renderPtab(){$('ptab').innerHTML=`<thead><tr><th>Perfil</th><th>Supervisa</th><th>Oblig.</th><th>Valor sugerido</th></tr></thead><tbody>${D.perfiles.map((p,i)=>`<tr data-i="${i}"${i===catI?' class="sel"':''}><td data-l="Perfil"><b>${esc(p.nombre)}</b><br><span class="note">${p.tipo==='SERVICIOS PROFESIONALES'?'Profesional':'Apoyo a la gestión'} · ${esc(p.rubro)}</span></td><td data-l="Supervisa">${p.supervisor==='cie'?'Científica':'Administrativa'}</td><td class="n" data-l="Oblig.">${p.obligaciones.length}</td><td class="n" data-l="Valor">${esc(money(p.valorSug||0))}${p.vigTexto||p.pagoTexto?' *':` / ${p.mesesSug} m`}</td></tr>`).join('')}</tbody>`}
+function renderPtab(){$('ptab').innerHTML=`<thead><tr><th>Perfil</th><th>Supervisa</th><th>Oblig.</th><th>Valor sugerido</th></tr></thead><tbody>${D.perfiles.map((p,i)=>`<tr data-i="${i}"${i===catI?' class="sel"':''}><td data-l="Perfil"><b>${esc(p.nombre)}</b><br><span class="note">${p.tipo==='SERVICIOS PROFESIONALES'?'Profesional':'Apoyo a la gestión'} · ${esc(p.rubro)}</span></td><td data-l="Supervisa">${p.supervisor==='cie'?'Científica':'Administrativa'}</td><td class="n" data-l="Oblig.">${p.obligaciones.length}</td><td class="n" data-l="Valor">${esc(money(p.valorSug||0))}${p.vigTexto||p.pagoTexto||p.vigSug||p.pagoSug?' *':` / ${p.mesesSug} m`}</td></tr>`).join('')}</tbody>`}
 $('ptab').addEventListener('click',e=>{const r=e.target.closest('tr[data-i]');if(!r)return;catI=+r.dataset.i;$('catsel').value=catI;renderCat();if(innerWidth<900)$('cat').scrollIntoView({block:'start'})});
 $('catsel').onchange=()=>{catI=+$('catsel').value;renderCat()};
 $('cat').addEventListener('input',e=>{const t=e.target,k=t.dataset.k;if(!k)return;const p=D.perfiles[catI];

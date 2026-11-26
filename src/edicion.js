@@ -10,7 +10,7 @@
 let campoActivo='',editF='';
 const angosta=()=>matchMedia('(max-width:900px)').matches;
 /* qué marcas del documento corresponden a una casilla del formulario */
-const marcasDe=k=>k==='meses'||k==='vigt'?[k,'plazo']:[k];
+const marcasDe=k=>['meses','vdias','vini','vfin','vigt'].includes(k)?['plazo']:['ncuotas','pagos','pagot'].includes(k)?['pago']:k==='valor'?['valor','pago']:[k];
 const docTiene=(d,fs)=>{const c=compute();return JSON.stringify(bloques(d,c)).match(new RegExp(fs.map(f=>`"f":"${f}"`).join('|')))};
 
 function vista(v){const app=document.querySelector('#v-nuevo .app');app.classList.toggle('ver-doc',v==='doc');
@@ -32,8 +32,8 @@ function seguir(k,cambiarHoja){
  else m.scrollIntoView({block:'center',behavior:'smooth'});
  L.forEach(brillo);
 }
-$('f').addEventListener('focusin',e=>{const k=e.target.id;if(!F.includes(k)||k==='perfil')return;campoActivo=k;seguir(k,true)});
-$('f').addEventListener('input',e=>{const k=e.target.id;if(!F.includes(k)||k==='perfil')return;campoActivo=k;
+$('f').addEventListener('focusin',e=>{const k=e.target.classList.contains('pagoIn')?'pagos':e.target.id;if(!F.includes(k)||k==='perfil')return;campoActivo=k;seguir(k,true)});
+$('f').addEventListener('input',e=>{const k=e.target.classList.contains('pagoIn')?'pagos':e.target.id;if(!F.includes(k)||k==='perfil')return;campoActivo=k;
  requestAnimationFrame(()=>{const L=document.querySelectorAll(marcasDe(k).map(f=>`#paper mark[data-f="${f}"]`).join(','));L.forEach(m=>m.classList.add('vivo'))})});
 
 /* botón "✎ Editar" sobre el dato */
@@ -53,7 +53,8 @@ const _render=render;render=function(){_render();if(!eb.hidden)ocultarEditar()};
 
 /* abre la casilla de donde sale el dato */
 function irCampo(f){
- if(f==='plazo')f=String(S.vigt||'').trim()?'vigt':'meses';
+ if(f==='plazo')f={meses:'meses',dias:'meses',fechas:'vini',texto:'vigt'}[vModo()];
+ if(f==='pago'){const m=pModo();if(m==='varios'){if(angosta())vista('form');const el=document.querySelector('#pagosUI .pagoIn')||$('addPago');el.scrollIntoView({block:'center'});el.focus();brillo(el);return}f={iguales:'ncuotas',unico:'valor',texto:'pagot'}[m]}
  if(f.startsWith('cat:')){const k=f.slice(4);irA('catalogo');catI=Math.max(0,D.perfiles.findIndex(p=>p.id===S.perfil));$('catsel').value=catI;renderCat();
   const el=$('c-'+k);if(el){el.scrollIntoView({block:'center'});el.focus({preventScroll:true});brillo(el)}return}
  if(f.startsWith('aj:')){const k=f.slice(3);irA('ajustes');const el=$('aj-'+k);if(el){el.scrollIntoView({block:'center'});el.focus({preventScroll:true});brillo(el)}return}

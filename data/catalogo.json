@@ -116,10 +116,10 @@
    "rubro": "AC.2.4.5.02.09.01",
    "rubroNombre": "Honorarios profesionales",
    "idoneidad": "",
-   "vigTexto": "DESDE EL 21 DE SEPTIEMBRE HASTA EL 31 DE OCTUBRE DE 2026",
+   "vigTexto": "",
    "mesesSug": 2,
    "valorSug": 7506667,
-   "pagoTexto": "dos (02) cuotas una por el valor de un millón ochocientos setenta y seis mil seiscientos sesenta y seis pesos M/Cte $ 1.876.666, otra por el valor de cinco millones seiscientos treinta mil pesos M/Cte $5.630.000",
+   "pagoTexto": "",
    "ejemplo": {
     "nombre": "ANGIE LORENA MARTÍNEZ MORALES",
     "ndoc": "93414184",
@@ -130,6 +130,18 @@
     "fnec": "2026-09-18",
     "fcdp": "2026-09-21",
     "fsus": "2026-09-21"
+   },
+   "vigSug": {
+    "vmodo": "fechas",
+    "vini": "2026-09-21",
+    "vfin": "2026-10-31"
+   },
+   "pagoSug": {
+    "pmodo": "varios",
+    "pagos": [
+     1876667,
+     5630000
+    ]
    }
   },
   {
@@ -892,10 +904,10 @@
    "rubro": "AC.2.4.5.02.09.03",
    "rubroNombre": "Remuneración servicios técnicos",
    "idoneidad": "",
-   "vigTexto": "DOS (02) MESES Y QUINCE (15) DIAS",
+   "vigTexto": "",
    "mesesSug": 3,
    "valorSug": 5000000,
-   "pagoTexto": "tres (03) pagos, uno de un millón de pesos m/cte. ($1.000.000) y dos pagos por dos millones de pesos m/cte. ($2.000.000) cada uno",
+   "pagoTexto": "",
    "ejemplo": {
     "nombre": "FERNANDO JOSÉ GÓMEZ SALAS",
     "ndoc": "23767568",
@@ -906,6 +918,19 @@
     "fnec": "2026-09-15",
     "fcdp": "2026-09-16",
     "fsus": "2026-09-16"
+   },
+   "vigSug": {
+    "vmodo": "dias",
+    "meses": 2,
+    "vdias": 15
+   },
+   "pagoSug": {
+    "pmodo": "varios",
+    "pagos": [
+     1000000,
+     2000000,
+     2000000
+    ]
    }
   },
   {
@@ -1417,7 +1442,7 @@
    "rubro": "AC.2.4.5.02.09.01",
    "rubroNombre": "Honorarios profesionales",
    "idoneidad": "",
-   "vigTexto": "DURANTE LOS MESES SEPTIEMBRE Y OCTUBRE DE 2026",
+   "vigTexto": "",
    "mesesSug": 2,
    "valorSug": 10800000,
    "pagoTexto": "",
@@ -1431,6 +1456,11 @@
     "fnec": "2026-08-28",
     "fcdp": "2026-09-01",
     "fsus": "2026-09-01"
+   },
+   "vigSug": {
+    "vmodo": "fechas",
+    "vini": "2026-09-01",
+    "vfin": "2026-10-31"
    }
   },
   {

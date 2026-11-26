@@ -18,7 +18,7 @@ from pathlib import Path
 RAIZ = Path(__file__).parent
 SRC = RAIZ / "src"
 # Orden en que se unen los archivos de código (todos comparten el mismo bloque).
-CODIGO = ["app.js", "documentos.js", "exportar.js", "contratistas.js", "edicion.js", "inicio.js"]
+CODIGO = ["app.js", "documentos.js", "exportar.js", "contratistas.js", "vigencia.js", "edicion.js", "inicio.js"]
 LIBRERIAS = ["vendor/jszip.min.js", "vendor/pdfmake.min.js"]
 
 
