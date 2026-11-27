@@ -135,45 +135,73 @@ async function importarPartes(partes,modo){const L=[],leidos=[],errores=[];
  const faltan=DOCLIST.filter(([k])=>!partes[k]).map(([,n])=>n);
  if(!partes.est)r.avisos.unshift('Sin los Estudios previos no se pueden leer la necesidad, la conveniencia ni las consideraciones; lo demás se tomó de los otros documentos.');
  errores.forEach(e=>r.avisos.unshift(e));
- impEstado={modo,res:[{archivo:`${leidos.length} documento${leidos.length===1?'':'s'}: ${leidos.join(', ')}`+(faltan.length?` · sin: ${faltan.join(', ')}`:''),...r}],destino:modo==='actualizar'?catI:null};
+ impEstado={modo,res:[{archivo:`${leidos.length} documento${leidos.length===1?'':'s'}: ${leidos.join(', ')}`+(faltan.length?` · sin: ${faltan.join(', ')}`:''),...r,dest:modo==='actualizar'?catI:'nuevo'}]};
  renderImp();$('imp').classList.add('on');
 }
+/* ¿A qué perfil del catálogo corresponde un expediente? Por el nombre del
+   archivo y, si no, por las palabras del objeto. */
+/* palabras que están en casi todos los contratos: no sirven para distinguir perfiles */
+const COMUNES=new Set('prestacion prestaciones servicio servicios apoyo gestion empresa social estado hospital local maria baja como para entidad conformidad normatividad vigente lineamientos institucionales necesidades demas actividades propias perfil profesional profesionales contrato objeto realizar cumplir garantizar acuerdo dentro todas segun cada desarrollo usuarios pacientes atencion'.split(' '));
+const palabras=t=>new Set(sinTildes(t).split(/[^a-z]+/).filter(w=>w.length>3&&!COMUNES.has(w)));
+function parecido(a,b){const A=palabras(a),B=palabras(b);if(!A.size||!B.size)return 0;let c=0;A.forEach(w=>{if(B.has(w))c++});return c/(A.size+B.size-c)}
+function adivinarPerfil(p){const exacto=D.perfiles.findIndex(x=>x.id===p.id);if(exacto>=0)return{i:exacto,s:1,nombre:true};
+ const sc=D.perfiles.map((x,i)=>({i,s:parecido(p.objeto,x.objeto)*.3+parecido(p.obligaciones.join(' '),x.obligaciones.join(' '))*.45+parecido(p.alcances.join(' '),x.alcances.join(' '))*.25})).sort((a,b)=>b.s-a.s);
+ const[m1,m2]=sc;if(!m1||m1.s<.2)return{i:-1,s:m1?m1.s:0};
+ return{i:m1.i,s:m1.s,dudoso:m2&&m1.s-m2.s<.08,segundo:m2&&m2.i}}
+
 async function importarWord(files,modo){
  const res=[];
  for(const f of files){if(!/\.docx$/i.test(f.name)){res.push({archivo:f.name,error:'Solo se pueden leer archivos .docx (Word 2007 en adelante). Si es .doc, ábralo en Word y guárdelo como .docx.'});continue}
   try{const L=await leerWord(await f.arrayBuffer());res.push({archivo:f.name,...extraerPerfil(L,f.name)})}catch(e){res.push({archivo:f.name,error:e.message||String(e)})}}
- impEstado={modo,res,destino:modo==='actualizar'?catI:null};renderImp();$('imp').classList.add('on');
+ res.forEach(r=>{if(r.error)return;if(modo==='actualizar')r.dest=catI;else if(modo==='crear')r.dest='nuevo';
+  else{const g=adivinarPerfil(r.p);r.dest=g.i>=0?g.i:'nuevo';r.seguro=g.s;r.porNombre=!!g.nombre;r.dudoso=!!g.dudoso;r.segundo=g.segundo}});
+ impEstado={modo,res};renderImp();$('imp').classList.add('on');
 }
-function renderImp(){const{modo,res,destino}=impEstado,act=modo==='actualizar',actual=act?D.perfiles[destino]:null;
- $('impt').textContent=act?`Actualizar «${actual.nombre}» desde Word`:res.length>1?`Crear ${res.length} perfiles desde Word`:'Crear perfil desde Word';
- $('impbody').innerHTML=res.map((r,ri)=>{if(r.error)return`<div class="card"><b>${esc(r.archivo)}</b><p class="gmsg bad">${esc(r.error)}</p></div>`;
-  const p=r.p,existe=!act&&D.perfiles.find(x=>x.id===p.id);
-  return`<div class="card imp" data-ri="${ri}"><p class="note" style="margin:0 0 6px">📎 ${esc(r.archivo)}</p>
-  ${act?'':`<label for="nom-${ri}">Nombre del perfil${r.pedirNombre?' (escríbalo)':''}</label><input id="nom-${ri}" data-nombre="${ri}" placeholder="Ej.: Psicólogo(a), Auxiliar de enfermería – urgencias" value="${esc(existe?p.nombre+' (nuevo)':p.nombre)}">${existe?`<p class="hint" style="margin:4px 0 0">Ya existe un perfil «${esc(existe.nombre)}». Se creará uno nuevo; si quería reemplazarlo, cancele, elíjalo en el Catálogo y use «Actualizar desde Word».</p>`:''}`}
-  ${r.avisos.length?`<ul class="checks" style="margin:10px 0 4px">${r.avisos.map(a=>`<li class="warn">${esc(a)}</li>`).join('')}</ul>`:''}
+function tarjetaImp(r,ri){
+ if(r.error)return`<div class="card"><b>${esc(r.archivo)}</b><p class="gmsg bad">${esc(r.error)}</p></div>`;
+ const p=r.p,lote=impEstado.modo==='lote',act=typeof r.dest==='number',actual=act?D.perfiles[r.dest]:null,nuevo=r.dest==='nuevo';
+ const existe=nuevo&&D.perfiles.find(x=>x.id===p.id);
+ const repetido=act&&impEstado.res.some((o,j)=>j!==ri&&!o.error&&o.dest===r.dest);
+ return`<div class="card imp${r.dest==='no'?' apagada':''}" data-ri="${ri}"><p class="note" style="margin:0 0 6px">📎 ${esc(r.archivo)}</p>
+  ${lote?`<label for="dest-${ri}">Actualiza el perfil</label><select id="dest-${ri}" data-dest="${ri}">
+    ${D.perfiles.map((x,i)=>`<option value="${i}"${r.dest===i?' selected':''}>${esc(x.nombre)}</option>`).join('')}
+    <option value="nuevo"${nuevo?' selected':''}>➕ Crear como perfil nuevo</option><option value="no"${r.dest==='no'?' selected':''}>✕ No usar este archivo</option></select>
+   <p class="${r.dudoso&&!r.cambiado?'gmsg bad':'hint'}" style="margin:4px 0 0">${r.cambiado?'Elegido por usted.':r.porNombre?'Reconocido por el nombre del archivo.':act?(r.dudoso?`⚠ Dudoso: se parece casi igual a «${esc(D.perfiles[r.segundo]?.nombre||'')}». Confirme cuál es.`:'Reconocido por el contenido (objeto, obligaciones y alcances). Revise que sea el correcto.'):'No se encontró un perfil parecido: se creará uno nuevo, o elija cuál actualizar.'}</p>
+   ${repetido?'<p class="gmsg bad" style="margin:4px 0 0">Otro archivo también actualiza este perfil: revise.</p>':''}`:''}
+  ${nuevo?`<label for="nom-${ri}">Nombre del perfil${r.pedirNombre?' (escríbalo)':''}</label><input id="nom-${ri}" data-nombre="${ri}" placeholder="Ej.: Psicólogo(a), Auxiliar de enfermería – urgencias" value="${esc(existe?p.nombre+' (nuevo)':p.nombre)}">${existe&&!lote?`<p class="hint" style="margin:4px 0 0">Ya existe un perfil «${esc(existe.nombre)}». Se creará uno nuevo; si quería reemplazarlo, use «Actualizar desde Word».</p>`:''}`:''}
+  ${r.dest==='no'?'':`${r.avisos.length?`<ul class="checks" style="margin:10px 0 4px">${r.avisos.map(a=>`<li class="warn">${esc(a)}</li>`).join('')}</ul>`:''}
   <p class="q" style="margin:12px 0 4px">${act?'Marque lo que quiere reemplazar':'Lo que se encontró'}</p>
   <div class="scroll"><table class="ptab mini impt"><thead><tr>${act?'<th></th>':''}<th>Parte</th>${act?'<th>Ahora</th>':''}<th>${act?'Del Word':'Valor'}</th></tr></thead><tbody>
   ${CAMPOS_IMP.map(([k,n])=>{const ok=tieneValor(p,k),dif=act&&JSON.stringify(k==='vigpago'?resumenSug(p):p[k])!==JSON.stringify(k==='vigpago'?resumenSug(actual):actual[k]);
    return`<tr>${act?`<td><input type="checkbox" data-campo="${k}" ${ok&&dif&&k!=='ejemplo'?'checked':''} ${ok?'':'disabled'} aria-label="Reemplazar ${esc(n)}"></td>`:''}<td><b>${esc(n)}</b></td>${act?`<td class="note">${esc(resumenCampo(actual,k))}</td>`:''}<td${ok?'':' class="note"'}>${esc(ok?resumenCampo(p,k):'no se encontró')}${act&&ok&&!dif?' <span class="note">(igual)</span>':''}</td></tr>`}).join('')}
   </tbody></table></div>
-  ${r.numero?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-usado="${ri}" ${usados().includes(r.numero)?'disabled':'checked'}> Marcar el contrato ${esc(r.numero)} como usado ${usados().includes(r.numero)?'(ya lo está)':''}</label>`:''}</div>`}).join('');
- $('impok').textContent=act?'Actualizar perfil':res.filter(r=>!r.error).length>1?'Crear perfiles':'Crear perfil';
- $('impok').disabled=!res.some(r=>!r.error);
-}
-function aplicarImp(){const{modo,res,destino}=impEstado;let nuevos=0;const marcar=[];
- if(modo==='crear'){const vacio=[...document.querySelectorAll('#impbody [data-nombre]')].find(el=>!el.value.trim());if(vacio){vacio.classList.add('bad');vacio.focus();vacio.placeholder='Escriba aquí el nombre del perfil';return}}
- res.forEach((r,ri)=>{if(r.error)return;const p=r.p;
+  ${r.numero?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-usado="${ri}" ${usados().includes(r.numero)?'disabled':'checked'}> Marcar el contrato ${esc(r.numero)} como usado ${usados().includes(r.numero)?'(ya lo está)':''}</label>`:''}`}</div>`}
+function renderImp(){const{modo,res}=impEstado,ok=res.filter(r=>!r.error);
+ $('impt').textContent=modo==='actualizar'?`Actualizar «${D.perfiles[ok[0]?.dest??catI].nombre}» desde Word`:modo==='lote'?`Actualizar varios perfiles desde Word (${res.length} archivo${res.length===1?'':'s'})`:res.length>1?`Crear ${res.length} perfiles desde Word`:'Crear perfil desde Word';
+ $('impbody').innerHTML=(modo==='lote'?`<p class="hint">El programa reconoció a qué perfil corresponde cada archivo. Revise cada uno: puede cambiar el perfil, crearlo como nuevo o no usarlo.</p>`:'')+res.map(tarjetaImp).join('');
+ renderImpBtn()}
+function renderImpBtn(){const{modo,res}=impEstado,ok=res.filter(r=>!r.error&&r.dest!=='no');
+ const na=ok.filter(r=>typeof r.dest==='number').length,nn=ok.filter(r=>r.dest==='nuevo').length;
+ $('impok').textContent=modo==='actualizar'?'Actualizar perfil':modo==='crear'?(nn>1?'Crear perfiles':'Crear perfil'):[na?`Actualizar ${na} perfil${na===1?'':'es'}`:'',nn?`crear ${nn}`:''].filter(Boolean).join(' y ')||'Nada que guardar';
+ $('impok').disabled=!ok.length}
+$('impbody').addEventListener('change',e=>{const d=e.target.closest('[data-dest]');if(!d)return;const r=impEstado.res[+d.dataset.dest];
+ r.dest=d.value==='nuevo'||d.value==='no'?d.value:+d.value;r.cambiado=true;
+ const y=$('imp').querySelector('.box').scrollTop;renderImp();$('imp').querySelector('.box').scrollTop=y});
+function aplicarImp(){const{modo,res}=impEstado;let nuevos=0,act=0;const marcar=[];
+ const vacio=[...document.querySelectorAll('#impbody [data-nombre]')].find(el=>!el.value.trim());if(vacio){vacio.classList.add('bad');vacio.focus();vacio.placeholder='Escriba aquí el nombre del perfil';return}
+ res.forEach((r,ri)=>{if(r.error||r.dest==='no')return;const p=r.p;
   const cb=document.querySelector(`[data-usado="${ri}"]`);if(r.numero&&cb&&cb.checked)marcar.push(r.numero);
-  if(modo==='actualizar'){const t=D.perfiles[destino];
-   document.querySelectorAll(`.imp[data-ri="${ri}"] [data-campo]:checked`).forEach(c=>{const k=c.dataset.campo;
-    if(k==='vigpago'){['mesesSug','vigTexto','vigSug','pagoTexto','pagoSug'].forEach(z=>t[z]=p[z])}else t[k]=p[k]})}
+  if(typeof r.dest==='number'){const t=D.perfiles[r.dest];let n=0;
+   document.querySelectorAll(`.imp[data-ri="${ri}"] [data-campo]:checked`).forEach(c=>{const k=c.dataset.campo;n++;
+    if(k==='vigpago'){['mesesSug','vigTexto','vigSug','pagoTexto','pagoSug'].forEach(z=>t[z]=p[z])}else t[k]=p[k]});
+   if(n)act++;catI=r.dest}
   else{const nombre=(document.querySelector(`[data-nombre="${ri}"]`)?.value||p.nombre).trim()||'Nuevo perfil';
    const base=sinTildes(nombre).replace(/[^a-z]+/g,'-').replace(/^-|-$/g,'')||'perfil';let id=base,n=2;while(D.perfiles.some(x=>x.id===id))id=base+'-'+n++;
    D.perfiles.push({...p,id,nombre});catI=D.perfiles.length-1;nuevos++}});
  if(marcar.length)AJ.usados=[...new Set(usados().concat(marcar))].join(', ');
  $('imp').classList.remove('on');impEstado=null;renderAj();renderPerfilSel();renderCat();render();guardar();
- const msg=modo==='actualizar'?'Perfil actualizado.':`${nuevos} perfil${nuevos===1?'':'es'} creado${nuevos===1?'':'s'}.`;
- $('catmsg').textContent='✓ '+msg+' Revise los datos abajo y corrija lo que haga falta.';$('catmsg').hidden=false;setTimeout(()=>$('catmsg').hidden=true,8000);
+ const msg=[act?`${act} perfil${act===1?'':'es'} actualizado${act===1?'':'s'}`:'',nuevos?`${nuevos} perfil${nuevos===1?'':'es'} creado${nuevos===1?'':'s'}`:''].filter(Boolean).join(' y ')||'No se cambió nada';
+ $('catmsg').textContent='✓ '+msg+'. Revise los datos abajo y corrija lo que haga falta.';$('catmsg').hidden=false;setTimeout(()=>$('catmsg').hidden=true,9000);
  $('cat').scrollIntoView({block:'start',behavior:'smooth'});
 }
 let origenModo='crear',partesSel={};
@@ -185,7 +213,11 @@ function renderPartes(){$('partes').innerHTML=DOCLIST.map(([k,n],i)=>`<div class
   <span class="pbtn">${partesSel[k]?`<button type="button" class="btn sm" data-quitarp="${k}" aria-label="Quitar ${esc(n)}">×</button>`:''}<button type="button" class="btn sm" data-parte="${k}">${partesSel[k]?'Cambiar':'Adjuntar'}</button></span></div>`).join('');
  const n=Object.values(partesSel).filter(Boolean).length;$('orileer').disabled=!n;$('orileer').textContent=n?`Leer ${n} documento${n===1?'':'s'}`:'Leer documentos'}
 $('catword').onclick=()=>abrirOrigen('crear');
-$('catwordup').onclick=()=>abrirOrigen('actualizar');
+$('catwordup').onclick=()=>{$('alcnom').textContent=D.perfiles[catI].nombre;$('alcance').classList.add('on');$('alcuno').focus()};
+$('alcuno').onclick=()=>{$('alcance').classList.remove('on');abrirOrigen('actualizar')};
+$('alcvarios').onclick=()=>{$('alcance').classList.remove('on');$('wordfile').dataset.modo='lote';$('wordfile').multiple=true;$('wordfile').click()};
+$('alcc').onclick=()=>$('alcance').classList.remove('on');
+$('alcance').addEventListener('keydown',e=>{if(e.key==='Escape')$('alcance').classList.remove('on')});
 $('oriuno').onclick=()=>{$('origen').classList.remove('on');$('wordfile').dataset.modo=origenModo;$('wordfile').multiple=origenModo==='crear';$('wordfile').click()};
 $('orivarios').onclick=()=>{$('oripartes').hidden=false;$('partes').querySelector('[data-parte]').focus()};
 $('partes').addEventListener('click',e=>{const a=e.target.closest('[data-parte]'),q=e.target.closest('[data-quitarp]');

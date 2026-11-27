@@ -100,8 +100,9 @@ En la pestaña **Catálogo de perfiles**:
 - **Crear**
   - **📎 Desde un expediente en Word:** adjunte uno o varios `.docx`. El programa saca objeto, obligaciones, alcances, necesidad, conveniencia, rubro, valor, vigencia, forma de pago y supervisor, y le muestra lo que encontró antes de guardar.
   - **En blanco**, o **copia del perfil elegido**.
-- **Actualizar el perfil elegido**
-  - **📎 Desde un Word:** muestra lado a lado lo que hay ahora y lo que trae el documento, y usted marca qué partes reemplazar.
+- **Actualizar perfiles** (📎 Actualizar desde Word): primero se elige
+  - **Solo el perfil elegido:** muestra lado a lado lo que hay ahora y lo que trae el documento, y usted marca qué partes reemplazar.
+  - **Varios o todos a la vez:** adjunte un expediente por perfil. El programa reconoce a cuál corresponde cada uno, por el nombre del archivo o por el contenido, y avisa si alguno es dudoso. Usted puede cambiar la asignación, crearlo como perfil nuevo o no usarlo.
   - O edítelo directamente en el formulario del Catálogo: cada cambio se guarda solo.
 - **Eliminar** el perfil elegido, con confirmación.
 

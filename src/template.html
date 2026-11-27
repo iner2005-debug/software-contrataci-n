@@ -104,6 +104,7 @@ input.bad{border-color:var(--red);background:var(--redbg)}
 .btn.peligro{border-color:var(--red);color:var(--red)}.btn.peligro:hover{background:var(--redbg)}
 @media(max-width:900px){.acciones{grid-template-columns:minmax(0,1fr)}}
 .dlg .box.ancho{max-width:920px}
+.card.imp.apagada{opacity:.6}
 .opcion{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);padding:12px 14px;margin:0 0 8px;cursor:pointer;font:15px Manrope,sans-serif}
 .opcion:hover,.opcion:focus-visible{border-color:var(--ink);background:var(--panel)}.opcion small{display:block;color:var(--mut);font-size:13px;margin-top:2px}
 .partes{display:grid;gap:6px;margin-top:6px}.parte{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -290,9 +291,9 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
    <button type="button" class="btn sm" id="catnew">En blanco</button>
    <button type="button" class="btn sm" id="catdup">Copia del perfil elegido</button>
    <p class="hint">Con Word: adjunte uno o varios expedientes (.docx) y el programa saca objeto, obligaciones, alcances, rubro, valor, vigencia y pago.</p></div>
-  <div class="acc"><h3>✎ Actualizar el perfil elegido</h3>
-   <button type="button" class="btn sm main2" id="catwordup">📎 Actualizar desde un Word</button>
-   <p class="hint">O edítelo directamente en el formulario de abajo: cada cambio se guarda solo. Con Word, usted elige qué partes reemplazar.</p></div>
+  <div class="acc"><h3>✎ Actualizar perfiles</h3>
+   <button type="button" class="btn sm main2" id="catwordup">📎 Actualizar desde Word</button>
+   <p class="hint">Primero elige: solo el perfil elegido, o varios/todos a la vez. Usted decide qué partes reemplazar. También puede editar el perfil elegido directamente en el formulario de abajo.</p></div>
   <div class="acc"><h3>🗑 Eliminar</h3>
    <button type="button" class="btn sm peligro" id="catdel">Eliminar el perfil elegido</button>
    <p class="hint">Pide confirmación. Los contratos ya generados no se borran.</p></div>
@@ -333,6 +334,13 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
 <input type="file" id="impfile" accept=".json,application/json" hidden>
 <input type="file" id="wordfile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
 <input type="file" id="partefile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<div class="dlg" id="alcance" role="dialog" aria-modal="true" aria-labelledby="alct"><div class="box">
+ <h2 id="alct" style="margin:0 0 4px;font-size:22px">Actualizar perfiles desde Word</h2>
+ <p class="q" style="margin:10px 0 8px">¿Qué quiere actualizar?</p>
+ <button type="button" class="opcion" id="alcuno"><b>👤 Solo el perfil elegido</b><small>«<span id="alcnom"></span>». Puede adjuntar el expediente completo o un Word por documento.</small></button>
+ <button type="button" class="opcion" id="alcvarios"><b>👥 Varios o todos los perfiles a la vez</b><small>Adjunte un expediente completo (.docx) por cada perfil. El programa reconoce a qué perfil corresponde cada uno y usted revisa antes de guardar.</small></button>
+ <div class="dlgbtn"><button class="btn" id="alcc" type="button">Cancelar</button></div>
+</div></div>
 <div class="dlg" id="origen" role="dialog" aria-modal="true" aria-labelledby="orit"><div class="box">
  <h2 id="orit" style="margin:0 0 4px;font-size:22px"></h2>
  <p class="q" style="margin:10px 0 8px">¿Cómo tiene los documentos?</p>
