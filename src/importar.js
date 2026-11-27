@@ -1,0 +1,154 @@
+/* ============================================================
+   CREAR O ACTUALIZAR PERFILES DESDE UN EXPEDIENTE EN WORD (.docx)
+   Lee el documento en el navegador (nada se sube a internet) y saca
+   objeto, obligaciones, alcances, necesidad, conveniencia, rubro,
+   valor, vigencia, forma de pago y supervisor. Es la misma lógica de
+   tools/extraer_perfiles.py.
+   ============================================================ */
+const sinTildes=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const GENERALES_OBL=['garantizar el cumplimiento del objeto contractual','obrar con seriedad','reportar en caso de cualquier novedad','acatar las directrices','guardar estricta reserva','guardar la debida','realizarse el examen','asumir de manera total','realizar aquellas actividades','presentar cuenta de cobro'];
+const GENERALES_CONS=['realizar la prest','realizar prest','realizar el objeto','la empresa social del estado hospital local maria la baja no posee','no posee el personal','la contratacion repercutira','adoptar procedimientos','es necesario entonces','el cubrimiento de esta necesidad'];
+
+/* párrafos del Word, en orden (incluye los de las tablas) */
+async function leerWord(buf){
+ const zip=await JSZip.loadAsync(buf),f=zip.file('word/document.xml');
+ if(!f)throw new Error('El archivo no es un Word .docx válido.');
+ const doc=new DOMParser().parseFromString(await f.async('string'),'application/xml'),W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ /* los cuadros de texto vienen repetidos (versión moderna y antigua): se quitan */
+ [...doc.getElementsByTagNameNS(W,'txbxContent')].forEach(n=>n.parentNode&&n.parentNode.removeChild(n));
+ [...doc.getElementsByTagNameNS('http://schemas.openxmlformats.org/markup-compatibility/2006','Fallback')].forEach(n=>n.parentNode&&n.parentNode.removeChild(n));
+ const L=[];
+ for(const p of doc.getElementsByTagNameNS(W,'p')){let t='';
+  const rec=n=>{for(const c of n.childNodes){if(c.namespaceURI===W&&c.localName==='t')t+=c.textContent;else if(c.namespaceURI===W&&(c.localName==='tab'||c.localName==='br'))t+=' ';else if(c.nodeType===1&&!(c.namespaceURI===W&&c.localName==='p'))rec(c)}};
+  rec(p);t=t.replace(/\s+/g,' ').trim();if(t)L.push(t)}
+ return L;
+}
+const buscarL=(L,re,desde=0)=>{for(let i=Math.max(desde,0);i<L.length;i++)if(re.test(L[i]))return i;return -1};
+
+function separarItems(texto){
+ const partes=(' '+texto).split(/\s(?=\d+\)+\s?)/),out=[],crudo=[];
+ for(let p of partes){p=p.trim().replace(/^\d+\)+\s*/,'').replace(/\s*\d+\.\d+\)\s*/g,'. ').trim();if(!p)continue;
+  const minus=p[0]===p[0].toLowerCase()&&p[0]!==p[0].toUpperCase();
+  if(out.length&&minus&&!/[.:;]$/.test(crudo[crudo.length-1])){out[out.length-1]=out[out.length-1].replace(/\.+$/,'')+' '+p;crudo[crudo.length-1]=p;if(!/[.:]$/.test(out[out.length-1]))out[out.length-1]+='.';continue}
+  crudo.push(p);p=p[0].toUpperCase()+p.slice(1);if(!/[.:]$/.test(p))p+='.';out.push(p)}
+ return out.filter(z=>z.replace(/^[. ]+|[. ]+$/g,'').length>3);
+}
+function fechaIso(s){const MS=MES.map(sinTildes);
+ const m=/\((\d{1,2})\)\s*del mes de\s*(\S+)/i.exec(s)||/(\d{1,2})\s*de\s*(\S+)\s*de\s*\d{4}/i.exec(s);
+ if(!m||!MS.includes(sinTildes(m[2])))return'';const a=/(20\d\d)/.exec(s);
+ return`${a?a[1]:new Date().getFullYear()}-${String(MS.indexOf(sinTildes(m[2]))+1).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`}
+const NUMS=Object.fromEntries(['cero','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce'].map((w,i)=>[w,i]));
+
+/* vigencia escrita → botones de "¿Cuánto dura?" */
+function vigDesdeTexto(t,anio){t=t.toUpperCase();const s=sinTildes(t);
+ let m=/desde el (\d{1,2}) de (\w+)(?: de (\d{4}))? hasta el (\d{1,2}) de (\w+)(?: de (\d{4}))?/.exec(s);const MS=MES.map(sinTildes);
+ if(m&&MS.includes(m[2])&&MS.includes(m[5])){const y2=m[6]||anio,y1=m[3]||y2,f=(y,mm,d)=>`${y}-${String(MS.indexOf(mm)+1).padStart(2,'0')}-${String(+d).padStart(2,'0')}`;
+  return{vmodo:'fechas',vini:f(y1,m[2],m[1]),vfin:f(y2,m[5],m[4])}}
+ m=/^\w+ \(0?(\d+)\) mes(es)? y \w+ \(0?(\d+)\) dias?$/.exec(s);if(m)return{vmodo:'dias',meses:+m[1],vdias:+m[3]};
+ m=/^\w+ \(0?(\d+)\) mes(es)?$/.exec(s);if(m)return{vmodo:'meses',meses:+m[1]};
+ return{vmodo:'texto',vigt:t}}
+
+function extraerPerfil(L,archivo){
+ const avisos=[],clave=archivo.replace(/\.docx$/i,'').replace(/^[0-9a-f]{8}-/,'');
+ const p={id:sinTildes(clave).replace(/[^a-z]+/g,'-').replace(/^-|-$/g,''),nombre:clave.replace(/_/g,' ').replace(/\./g,'. ').toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase()).replace(/\s+/g,' ').trim(),idoneidad:''};
+ let i=buscarL(L,/^\d?\.?\d?\.?\s*OBJETO\s*:/i);
+ if(i<0)i=buscarL(L,/^3\.2\.?\s*OBJETO/i);
+ p.objeto=i>=0?L[i].replace(/^[\d.\s]*OBJETO\s*:?\s*/i,''):'';if(p.objeto&&!p.objeto.endsWith('.'))p.objeto+='.';
+ p.tipo=/PROFESIONAL/i.test(p.objeto)?'SERVICIOS PROFESIONALES':'APOYO A LA GESTIÓN';
+ let a=Math.min(...[buscarL(L,/^3\.3/),buscarL(L,/^CONTRATANTE:\s*1\)/)].filter(j=>j>=0).concat([1e9]));if(a===1e9)a=-1;
+ let b=buscarL(L,/^3\.4|SUPERVISOR[AE]?\s*:/i,a);
+ const sec=a>=0&&b>a?L.slice(a,b).join(' '):'',k=sec.indexOf('CONTRATISTA:');
+ p.obligaciones=(k>=0?separarItems(sec.slice(k+12)):[]).filter(z=>!GENERALES_OBL.some(g=>sinTildes(z).startsWith(g)));
+ p.supervisor=b>=0&&sinTildes(L[b]).includes('cient')?'cie':'adm';
+ a=buscarL(L,/ALCANCES DEL CONTRATO/i);b=buscarL(L,/^Se evidencia dentro/i,a);
+ p.alcances=(a>=0&&b>0?L.slice(a+1,b):[]).map(z=>z.replace(/^-\s+/,'')).filter(z=>!z.startsWith('El objeto del contrato')&&!sinTildes(z).startsWith('repercute indirectamente'));
+ a=buscarL(L,/DESCRIPCI[ÓO]N DE LA NECESIDAD/i);b=buscarL(L,/JUSTIFICACI[ÓO]N DE LA NECESIDAD/i,a);
+ p.necesidad=a>=0&&b>0?L.slice(a+1,b).map(z=>z.replace(/^-\s+/,'• ')):[];
+ a=buscarL(L,/CONVENIENCIA Y OPORTUNIDAD/i);
+ const fines=[buscarL(L,/^La satisfacci[óo]n de la necesidad/i,a),buscarL(L,/^Es así que a sabiendas/i,a),buscarL(L,/^En este orden de ideas/i,a)].filter(j=>j>0);
+ p.conveniencia=a>=0&&fines.length?L.slice(a+1,Math.min(...fines)):[];
+ a=buscarL(L,/^En este orden de ideas/i);b=buscarL(L,/^Para tal fin/i,a);
+ p.consideraciones=(a>=0&&b>0?L.slice(a+1,b):[]).map(z=>z.replace(/^-\s+/,'')).filter(z=>!GENERALES_CONS.some(g=>sinTildes(z).startsWith(g)));
+ i=buscarL(L,/CDP No/i);const cdpL=i>=0?L[i]:'';
+ let m=/RUBRO\s*No\.?\s*(AC\.?\s*[\d.]+?)\.?\s*,?\s*(?:CON\s+)?NOMBRE:\s*(.+?)\s*(?:,|\bVALOR|\$|\b[A-ZÁÉÍÓÚ]+ MILLONES)/i.exec(cdpL);
+ p.rubro=m?m[1].replace(/\s/g,'').replace(/\.\.+/g,'.'):'';p.rubroNombre=m?m[2].trim().replace(/[.,]+$/,'').toLowerCase().replace(/^./,c=>c.toUpperCase()):'';
+ if(!p.rubro)avisos.push('No se encontró el rubro.');
+ i=buscarL(L,/^\d?\.?\d*\.?\s*VIGENCIA:|^3\.5/i);
+ const vig=i>=0?L[i].replace(/^[\d.\s]*VIGENCIA:\s*/i,'').trim().replace(/\.$/,''):'';
+ i=buscarL(L,/^\d?\.?\d*\.?\s*VALOR:|^3\.6/i);m=i>=0?/\$\s*([\d.]+)/.exec(L[i]):null;
+ p.valorSug=m?+m[1].replace(/\./g,''):0;
+ if(m&&m[1].split('.').pop().length!==3)avisos.push(`Valor mal escrito en el documento: $${m[1]}. Revíselo.`);
+ const anio=(/(20\d\d)/.exec(cdpL)||[])[1]||String(new Date().getFullYear());
+ const v=vig?vigDesdeTexto(vig,anio):{vmodo:'meses',meses:2};
+ p.mesesSug=v.meses||(/\(0?(\d+)\)/.exec(vig)||[])[1]*1||2;p.vigTexto='';p.vigSug=undefined;
+ if(v.vmodo==='texto')p.vigTexto=v.vigt;else if(v.vmodo!=='meses')p.vigSug=v;
+ if(v.vmodo==='fechas'){const a1=pd(v.vini),b1=pd(v.vfin);p.mesesSug=Math.max(1,(b1.y*12+b1.m)-(a1.y*12+a1.m)+1)}
+ i=buscarL(L,/^\d?\.?\d*\.?\s*FORMA DE PAGO|^3\.7/i);const fp=i>=0?L[i]:'';p.pagoTexto='';p.pagoSug=undefined;
+ if(fp&&!/cuotas mensuales iguales/i.test(fp)){const mm=/Se pagar[áa] en\s*(.+?),?\s*despu[ée]s de/i.exec(fp);const txt=mm?mm[1].trim().replace(/[,.]+$/,''):'';
+  const montos=[...txt.matchAll(/\$\s*([\d.]{5,})/g)].map(z=>+z[1].replace(/\./g,''));
+  if(montos.length>1&&montos.reduce((s,n)=>s+n,0)===p.valorSug)p.pagoSug={pmodo:'varios',pagos:montos};else if(txt)p.pagoTexto=txt}
+ /* ejemplo con los datos del contrato que traía el documento */
+ i=buscarL(L,/se reunieron/i);const acta=i>=0?L[i]:'';
+ m=/(?:señora|señor)\s*(?:\(a\))?\s*,?\s*(.+?),?\s*identificad[oa]\s*(?:\(a\))?\s*con\s*C\.C\.?\s*(?:N°|No:?|No\.)?\s*([\d.]+)/.exec(acta);
+ const nombre=m?m[1].trim().replace(/,$/,'').replace(/^A,\s*/,'').toUpperCase():'',sexo=/identificada\b/.test(acta)?'f':/identificado\s+con/.test(acta)?'m':'';
+ const m2=/CDP No\.?\s*([\w.]+?)\s+del?\s/i.exec(cdpL);i=buscarL(L,/^CONTRATO NO\./i);const mn=i>=0?/C-HLMLB-\s*(\d{8})-\s*(\d+)/.exec(L[i]):null;
+ const q=buscarL(L,/^Queda constancia que la necesidad/i),j=buscarL(L,/firma por las partes el día/i),fs=j>=0?L[j].slice(L[j].indexOf('firma por las partes el día')):'';
+ const f1=fechaIso(fs),f2=fechaIso(cdpL);
+ p.ejemplo={nombre,ndoc:m?m[2].replace(/\./g,''):'',sexo,cdp:m2?m2[1]:'',rp:m2?m2[1]:'',consec:mn?+mn[2]:'',fnec:q>=0?fechaIso(L[q]):'',fcdp:f2,fsus:f1>f2?f1:f2};
+ const numero=mn?`C-HLMLB-${mn[1]}-${mn[2].padStart(2,'0')}`:'';
+ ['objeto','obligaciones','alcances'].forEach(c=>{if(!p[c]||!p[c].length)avisos.push(`No se encontró: ${c}.`)});
+ if(!p.objeto&&!p.obligaciones.length)avisos.unshift('No parece un expediente de contratación de la ESE (no tiene objeto ni obligaciones).');
+ return{p,numero,avisos};
+}
+
+/* ---------- pantalla: revisar lo que se encontró antes de guardar ---------- */
+const CAMPOS_IMP=[['objeto','Objeto'],['obligaciones','Obligaciones específicas'],['alcances','Alcances'],['necesidad','Descripción de la necesidad'],['conveniencia','Conveniencia y oportunidad'],['consideraciones','Consideraciones'],['rubro','Rubro'],['rubroNombre','Nombre del rubro'],['tipo','Tipo'],['supervisor','Supervisa'],['valorSug','Valor sugerido'],['vigpago','Vigencia y forma de pago'],['ejemplo','Ejemplo (datos del contrato del documento)']];
+let impEstado=null;
+const resumenCampo=(p,k)=>{const v=p[k];if(k==='vigpago'){const[a,b]=resumenSug(p);return(a||'—')+' · '+(b||'—')}
+ if(k==='supervisor')return v==='cie'?'Subgerente científica':'Subgerente administrativa';if(k==='valorSug')return money(v||0);
+ if(k==='ejemplo')return v&&v.nombre?`${v.nombre} · ${v.ndoc?cc(v.ndoc):''}`:'—';
+ if(Array.isArray(v))return v.length?`${v.length} · ${v[0].slice(0,90)}${v[0].length>90?'…':''}`:'—';return v?String(v).slice(0,140)+(String(v).length>140?'…':''):'—'};
+const tieneValor=(p,k)=>k==='vigpago'?true:k==='ejemplo'?!!(p.ejemplo&&p.ejemplo.nombre):Array.isArray(p[k])?p[k].length>0:!!p[k];
+
+async function importarWord(files,modo){
+ const res=[];
+ for(const f of files){if(!/\.docx$/i.test(f.name)){res.push({archivo:f.name,error:'Solo se pueden leer archivos .docx (Word 2007 en adelante). Si es .doc, ábralo en Word y guárdelo como .docx.'});continue}
+  try{const L=await leerWord(await f.arrayBuffer());res.push({archivo:f.name,...extraerPerfil(L,f.name)})}catch(e){res.push({archivo:f.name,error:e.message||String(e)})}}
+ impEstado={modo,res,destino:modo==='actualizar'?catI:null};renderImp();$('imp').classList.add('on');
+}
+function renderImp(){const{modo,res,destino}=impEstado,act=modo==='actualizar',actual=act?D.perfiles[destino]:null;
+ $('impt').textContent=act?`Actualizar «${actual.nombre}» desde Word`:res.length>1?`Crear ${res.length} perfiles desde Word`:'Crear perfil desde Word';
+ $('impbody').innerHTML=res.map((r,ri)=>{if(r.error)return`<div class="card"><b>${esc(r.archivo)}</b><p class="gmsg bad">${esc(r.error)}</p></div>`;
+  const p=r.p,existe=!act&&D.perfiles.find(x=>x.id===p.id);
+  return`<div class="card imp" data-ri="${ri}"><p class="note" style="margin:0 0 6px">📎 ${esc(r.archivo)}</p>
+  ${act?'':`<label>Nombre del perfil</label><input data-nombre="${ri}" value="${esc(existe?p.nombre+' (nuevo)':p.nombre)}">${existe?`<p class="hint" style="margin:4px 0 0">Ya existe un perfil «${esc(existe.nombre)}». Se creará uno nuevo; si quería reemplazarlo, cancele, elíjalo en el Catálogo y use «Actualizar desde Word».</p>`:''}`}
+  ${r.avisos.length?`<ul class="checks" style="margin:10px 0 4px">${r.avisos.map(a=>`<li class="warn">${esc(a)}</li>`).join('')}</ul>`:''}
+  <p class="q" style="margin:12px 0 4px">${act?'Marque lo que quiere reemplazar':'Lo que se encontró'}</p>
+  <div class="scroll"><table class="ptab mini impt"><thead><tr>${act?'<th></th>':''}<th>Parte</th>${act?'<th>Ahora</th>':''}<th>${act?'Del Word':'Valor'}</th></tr></thead><tbody>
+  ${CAMPOS_IMP.map(([k,n])=>{const ok=tieneValor(p,k),dif=act&&JSON.stringify(k==='vigpago'?resumenSug(p):p[k])!==JSON.stringify(k==='vigpago'?resumenSug(actual):actual[k]);
+   return`<tr>${act?`<td><input type="checkbox" data-campo="${k}" ${ok&&dif&&k!=='ejemplo'?'checked':''} ${ok?'':'disabled'} aria-label="Reemplazar ${esc(n)}"></td>`:''}<td><b>${esc(n)}</b></td>${act?`<td class="note">${esc(resumenCampo(actual,k))}</td>`:''}<td${ok?'':' class="note"'}>${esc(ok?resumenCampo(p,k):'no se encontró')}${act&&ok&&!dif?' <span class="note">(igual)</span>':''}</td></tr>`}).join('')}
+  </tbody></table></div>
+  ${r.numero?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-usado="${ri}" ${usados().includes(r.numero)?'disabled':'checked'}> Marcar el contrato ${esc(r.numero)} como usado ${usados().includes(r.numero)?'(ya lo está)':''}</label>`:''}</div>`}).join('');
+ $('impok').textContent=act?'Actualizar perfil':res.filter(r=>!r.error).length>1?'Crear perfiles':'Crear perfil';
+ $('impok').disabled=!res.some(r=>!r.error);
+}
+function aplicarImp(){const{modo,res,destino}=impEstado;let nuevos=0;const marcar=[];
+ res.forEach((r,ri)=>{if(r.error)return;const p=r.p;
+  const cb=document.querySelector(`[data-usado="${ri}"]`);if(r.numero&&cb&&cb.checked)marcar.push(r.numero);
+  if(modo==='actualizar'){const t=D.perfiles[destino];
+   document.querySelectorAll(`.imp[data-ri="${ri}"] [data-campo]:checked`).forEach(c=>{const k=c.dataset.campo;
+    if(k==='vigpago'){['mesesSug','vigTexto','vigSug','pagoTexto','pagoSug'].forEach(z=>t[z]=p[z])}else t[k]=p[k]})}
+  else{const nombre=(document.querySelector(`[data-nombre="${ri}"]`)?.value||p.nombre).trim()||'Nuevo perfil';
+   let id=p.id||'perfil',n=2;while(D.perfiles.some(x=>x.id===id))id=(p.id||'perfil')+'-'+n++;
+   D.perfiles.push({...p,id,nombre});catI=D.perfiles.length-1;nuevos++}});
+ if(marcar.length)AJ.usados=[...new Set(usados().concat(marcar))].join(', ');
+ $('imp').classList.remove('on');impEstado=null;renderAj();renderPerfilSel();renderCat();render();guardar();
+ const msg=modo==='actualizar'?'Perfil actualizado.':`${nuevos} perfil${nuevos===1?'':'es'} creado${nuevos===1?'':'s'}.`;
+ $('catmsg').textContent='✓ '+msg+' Revise los datos abajo y corrija lo que haga falta.';$('catmsg').hidden=false;setTimeout(()=>$('catmsg').hidden=true,8000);
+ $('cat').scrollIntoView({block:'start',behavior:'smooth'});
+}
+$('catword').onclick=()=>{$('wordfile').dataset.modo='crear';$('wordfile').multiple=true;$('wordfile').click()};
+$('catwordup').onclick=()=>{$('wordfile').dataset.modo='actualizar';$('wordfile').multiple=false;$('wordfile').click()};
+$('wordfile').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)importarWord(fs,e.target.dataset.modo)};
+$('impok').onclick=aplicarImp;$('impc').onclick=()=>{$('imp').classList.remove('on');impEstado=null};
+$('imp').addEventListener('keydown',e=>{if(e.key==='Escape')$('imp').classList.remove('on')});

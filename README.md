@@ -93,7 +93,21 @@ python3 build.py
 
 Necesita LibreOffice, poppler-utils (`pdftoppm`) y Pillow. El Word que produce el software usa ese `.docx` como base, así que el encabezado, la marca de agua y el pie salen idénticos. El PDF usa una imagen de la misma hoja.
 
-## Agregar perfiles desde nuevos expedientes Word
+## Catálogo de perfiles: crear, actualizar y eliminar
+
+En la pestaña **Catálogo de perfiles**:
+
+- **Crear**
+  - **📎 Desde un expediente en Word:** adjunte uno o varios `.docx`. El programa saca objeto, obligaciones, alcances, necesidad, conveniencia, rubro, valor, vigencia, forma de pago y supervisor, y le muestra lo que encontró antes de guardar.
+  - **En blanco**, o **copia del perfil elegido**.
+- **Actualizar el perfil elegido**
+  - **📎 Desde un Word:** muestra lado a lado lo que hay ahora y lo que trae el documento, y usted marca qué partes reemplazar.
+  - O edítelo directamente en el formulario del Catálogo: cada cambio se guarda solo.
+- **Eliminar** el perfil elegido, con confirmación.
+
+El Word se lee dentro del navegador: el documento no se sube a internet.
+
+## Agregar perfiles desde la terminal (opcional)
 
 ```bash
 python3 tools/extraer_perfiles.py carpeta_con_docx/             # revisar qué encuentra

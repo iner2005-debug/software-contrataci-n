@@ -96,6 +96,15 @@ input.bad{border-color:var(--red);background:var(--redbg)}
 .files li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .files em{font-style:normal;font-size:12px;font-weight:700;background:var(--yd);padding:3px 8px;border-radius:5px;white-space:nowrap}
 .note{font-size:13px;color:var(--mut)}
+/* catálogo: crear / actualizar / eliminar */
+.acciones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.acc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.acc h3{margin:0;font-size:16px}.acc .hint{margin:2px 0 0;font-size:13px}.acc .btn{width:100%;text-align:left}
+.btn.main2{background:var(--ink);color:var(--bg)}
+.btn.peligro{border-color:var(--red);color:var(--red)}.btn.peligro:hover{background:var(--redbg)}
+@media(max-width:900px){.acciones{grid-template-columns:minmax(0,1fr)}}
+.dlg .box.ancho{max-width:920px}
+.impt td{vertical-align:top}.impt td:first-child input{width:auto;min-height:0;accent-color:var(--ink)}
 /* vigencia y forma de pago */
 .q{font-weight:700;font-size:15px;margin:18px 0 6px}
 .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -271,7 +280,21 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
  <h2>Catálogo de perfiles</h2>
  <div class="card savebar" data-sb></div>
  <p class="note" style="font-size:15px">Se crea una vez por cada tipo de contrato. Lo que edite aquí se refleja de inmediato en la vista previa. Una línea = una obligación o un alcance; la numeración la pone el software. Las obligaciones generales (garantizar, obrar con seriedad, reserva, examen médico, cuenta de cobro…) las agrega el software a todos los perfiles.</p>
- <div class="presets"><select id="catsel" style="max-width:420px" aria-label="Perfil a editar"></select><button type="button" class="btn sm" id="catnew">Nuevo perfil</button><button type="button" class="btn sm" id="catdup">Duplicar este</button><button type="button" class="btn sm" id="catdel">Eliminar este</button></div>
+ <div class="acciones">
+  <div class="acc"><h3>➕ Crear un perfil</h3>
+   <button type="button" class="btn sm main2" id="catword">📎 Desde un expediente en Word</button>
+   <button type="button" class="btn sm" id="catnew">En blanco</button>
+   <button type="button" class="btn sm" id="catdup">Copia del perfil elegido</button>
+   <p class="hint">Con Word: adjunte uno o varios expedientes (.docx) y el programa saca objeto, obligaciones, alcances, rubro, valor, vigencia y pago.</p></div>
+  <div class="acc"><h3>✎ Actualizar el perfil elegido</h3>
+   <button type="button" class="btn sm main2" id="catwordup">📎 Actualizar desde un Word</button>
+   <p class="hint">O edítelo directamente en el formulario de abajo: cada cambio se guarda solo. Con Word, usted elige qué partes reemplazar.</p></div>
+  <div class="acc"><h3>🗑 Eliminar</h3>
+   <button type="button" class="btn sm peligro" id="catdel">Eliminar el perfil elegido</button>
+   <p class="hint">Pide confirmación. Los contratos ya generados no se borran.</p></div>
+ </div>
+ <p class="gmsg ok" id="catmsg" hidden></p>
+ <label for="catsel">Perfil elegido</label><select id="catsel" style="max-width:520px"></select>
  <div class="catgrid">
   <div><div class="scroll"><table class="ptab" id="ptab"></table></div><p class="note">* Vigencia por fechas o pagos especiales. Clic en una fila para editarla.</p></div>
   <div id="cat"></div>
@@ -304,6 +327,13 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
 </div></div>
 
 <input type="file" id="impfile" accept=".json,application/json" hidden>
+<input type="file" id="wordfile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<div class="dlg" id="imp" role="dialog" aria-modal="true" aria-labelledby="impt"><div class="box ancho">
+ <h2 id="impt" style="margin:0 0 4px;font-size:22px"></h2>
+ <p class="note">Revise lo que el programa encontró en el documento. Nada se guarda hasta que pulse el botón de abajo.</p>
+ <div id="impbody"></div>
+ <div class="dlgbtn"><button class="btn" id="impc" type="button">Cancelar</button><button class="btn main" id="impok" type="button">Guardar</button></div>
+</div></div>
 <!--LIBS-->
 <script>
 {

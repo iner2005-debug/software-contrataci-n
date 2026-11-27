@@ -156,6 +156,7 @@ $('aj').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;AJ[
 
 const TA=(i,k,lbl,h)=>{const p=D.perfiles[i],arr=Array.isArray(p[k]);return`<label for="c-${k}">${lbl}</label><textarea id="c-${k}" data-k="${k}" ${arr?'data-l="1"':''} style="min-height:${h}px">${esc(arr?p[k].join('\n'):p[k])}</textarea>`};
 function renderCat(){const i=catI,p=D.perfiles[i];$('cat').innerHTML=`<div class="card">
+ <h3 style="margin:0 0 4px" id="catEd">Editando: ${esc(p.nombre)}</h3><p class="hint" style="margin:0 0 6px">Los cambios se guardan solos y se ven de inmediato en Nuevo contrato.</p>
  <label for="c-nombre">Nombre del perfil</label><input id="c-nombre" data-k="nombre" value="${esc(p.nombre)}">
  <div class="row"><div><label for="c-tipo">Tipo</label><select id="c-tipo" data-k="tipo"><option${p.tipo==='SERVICIOS PROFESIONALES'?' selected':''}>SERVICIOS PROFESIONALES</option><option${p.tipo!=='SERVICIOS PROFESIONALES'?' selected':''}>APOYO A LA GESTIÓN</option></select></div>
  <div><label for="c-supervisor">Supervisa</label><select id="c-supervisor" data-k="supervisor"><option value="adm"${p.supervisor==='adm'?' selected':''}>Subgerente administrativa</option><option value="cie"${p.supervisor==='cie'?' selected':''}>Subgerente científica</option></select></div></div>
@@ -178,7 +179,7 @@ $('ptab').addEventListener('click',e=>{const r=e.target.closest('tr[data-i]');if
 $('catsel').onchange=()=>{catI=+$('catsel').value;renderCat()};
 $('cat').addEventListener('input',e=>{const t=e.target,k=t.dataset.k;if(!k)return;const p=D.perfiles[catI];
  p[k]=t.dataset.l?t.value.split('\n').map(s=>s.trim()).filter(Boolean):t.dataset.n?Number(t.value.replace(/\D/g,''))||0:t.value;
- if(k==='nombre'||k==='tipo'){renderPerfilSel()}renderPtab();render();guardar()});
+ if(k==='nombre'||k==='tipo'){renderPerfilSel();$('catEd').textContent='Editando: '+p.nombre}renderPtab();render();guardar()});
 $('cat').addEventListener('change',e=>{if(e.target.tagName==='SELECT')e.target.dispatchEvent(new Event('input',{bubbles:true}))});
 const addPerfil=base=>{const id='perfil-'+Date.now();D.perfiles.push({...JSON.parse(JSON.stringify(base)),id,nombre:base.nombre?base.nombre+' (copia)':'Nuevo perfil'});catI=D.perfiles.length-1;renderPerfilSel();renderCat();guardar()};
 $('catnew').onclick=()=>addPerfil({nombre:'',tipo:'APOYO A LA GESTIÓN',supervisor:'adm',objeto:'',rubro:'',rubroNombre:'',idoneidad:'',necesidad:[],conveniencia:[],consideraciones:[],obligaciones:[],alcances:[],valorSug:0,mesesSug:2,vigTexto:'',pagoTexto:'',ejemplo:{}});
