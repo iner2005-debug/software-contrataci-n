@@ -1,5 +1,6 @@
 # Publica el software en GitHub Pages cada vez que se sube un cambio a "main".
-# Arma dist/index.html con build.py y publica solo esa carpeta.
+# Paso 1 (armar): build.py crea dist/index.html y se empaqueta.
+# Paso 2 (publicar): GitHub Pages publica ese paquete.
 name: Publicar en GitHub Pages
 
 on:
@@ -14,14 +15,11 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  publicar:
+  armar:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,5 +31,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  publicar:
+    needs: armar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v4
