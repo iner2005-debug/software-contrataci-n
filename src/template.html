@@ -104,6 +104,10 @@ input.bad{border-color:var(--red);background:var(--redbg)}
 .btn.peligro{border-color:var(--red);color:var(--red)}.btn.peligro:hover{background:var(--redbg)}
 @media(max-width:900px){.acciones{grid-template-columns:minmax(0,1fr)}}
 .dlg .box.ancho{max-width:920px}
+.opcion{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);padding:12px 14px;margin:0 0 8px;cursor:pointer;font:15px Manrope,sans-serif}
+.opcion:hover,.opcion:focus-visible{border-color:var(--ink);background:var(--panel)}.opcion small{display:block;color:var(--mut);font-size:13px;margin-top:2px}
+.partes{display:grid;gap:6px;margin-top:6px}.parte{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.parte small{display:block;color:var(--mut);font-size:12.5px;overflow-wrap:anywhere}.pbtn{display:flex;gap:6px;flex:none}
 .impt td{vertical-align:top}.impt td:first-child input{width:auto;min-height:0;accent-color:var(--ink)}
 /* vigencia y forma de pago */
 .q{font-weight:700;font-size:15px;margin:18px 0 6px}
@@ -328,6 +332,16 @@ details.mas{margin:12px 0 0}details.mas summary{cursor:pointer;font-weight:600;f
 
 <input type="file" id="impfile" accept=".json,application/json" hidden>
 <input type="file" id="wordfile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<input type="file" id="partefile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<div class="dlg" id="origen" role="dialog" aria-modal="true" aria-labelledby="orit"><div class="box">
+ <h2 id="orit" style="margin:0 0 4px;font-size:22px"></h2>
+ <p class="q" style="margin:10px 0 8px">¿Cómo tiene los documentos?</p>
+ <button type="button" class="opcion" id="oriuno"><b>📄 Todo en un solo Word</b><small></small></button>
+ <button type="button" class="opcion" id="orivarios"><b>🗂 Un Word por documento</b><small>Adjunte Necesidad, Estudios previos, Idoneidad, Designación, Notificación, Contrato y Acta de inicio por separado. Puede adjuntar solo los que tenga.</small></button>
+ <div id="oripartes" hidden><div class="partes" id="partes"></div>
+  <p class="hint" style="margin:8px 0 0">Lo más completo sale de los <b>Estudios previos</b>. Si no los tiene, el objeto, las obligaciones, los alcances, el rubro, el valor y el plazo se toman del Contrato y del Acta.</p></div>
+ <div class="dlgbtn"><button class="btn" id="oric" type="button">Cancelar</button><button class="btn main" id="orileer" type="button" disabled>Leer documentos</button></div>
+</div></div>
 <div class="dlg" id="imp" role="dialog" aria-modal="true" aria-labelledby="impt"><div class="box ancho">
  <h2 id="impt" style="margin:0 0 4px;font-size:22px"></h2>
  <p class="note">Revise lo que el programa encontró en el documento. Nada se guarda hasta que pulse el botón de abajo.</p>

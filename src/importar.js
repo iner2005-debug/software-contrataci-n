@@ -96,6 +96,20 @@ function extraerPerfil(L,archivo){
  const f1=fechaIso(fs),f2=fechaIso(cdpL);
  p.ejemplo={nombre,ndoc:m?m[2].replace(/\./g,''):'',sexo,cdp:m2?m2[1]:'',rp:m2?m2[1]:'',consec:mn?+mn[2]:'',fnec:q>=0?fechaIso(L[q]):'',fcdp:f2,fsus:f1>f2?f1:f2};
  const numero=mn?`C-HLMLB-${mn[1]}-${mn[2].padStart(2,'0')}`:'';
+ /* Si no vinieron los Estudios previos (o les falta algo), se busca en los otros documentos */
+ const C=L.slice(Math.max(0,buscarL(L,/^CONTRATO NO\./i))).join(' ');
+ if(!p.objeto){const mo=/tiene como Objeto\s+(.+?)\s*CL[AÁ]USULA SEGUNDA/i.exec(C)||/con Objeto\s+(.+?),?\s*dentro de las instalaciones/i.exec(acta)||/que imparta la\s+(.+)$/i.exec(L[buscarL(L,/que imparta la/i)]||'');
+  if(mo){p.objeto=mo[1].trim().replace(/[,.]*$/,'.');p.tipo=/PROFESIONAL/i.test(p.objeto)?'SERVICIOS PROFESIONALES':'APOYO A LA GESTIÓN'}}
+ if(!p.obligaciones.length){const mo=/CL[AÁ]USULA SEXTA.*?componente:\s*(.+?)\s*PAR[AÁ]GRA[FD]O/i.exec(C);
+  if(mo)p.obligaciones=separarItems(mo[1]).filter(z=>!GENERALES_OBL.some(g=>sinTildes(z).startsWith(g)))}
+ if(!p.alcances.length){const mo=/CL[AÁ]USULA SEGUNDA.*?alcance:\s*(.+?)\s*CL[AÁ]USULA TERCERA/i.exec(C);
+  if(mo)p.alcances=separarItems(mo[1]).map(z=>z.replace(/^-\s*/,'')).filter(z=>!sinTildes(z).startsWith('repercute indirectamente'))}
+ if(!p.rubro){const mo=/RUBRO\s*No\.?\s*(AC\.?\s*[\d.]+?)\.?\s*,?\s*(?:CON\s+)?NOMBRE:\s*(.+?)\s*(?:,|\bVALOR|\$|\b[A-ZÁÉÍÓÚ]+ MILLONES|expedido)/i.exec(C);
+  if(mo){p.rubro=mo[1].replace(/\s/g,'').replace(/\.\.+/g,'.');p.rubroNombre=mo[2].trim().replace(/[.,]+$/,'').toLowerCase().replace(/^./,c=>c.toUpperCase());const k=avisos.indexOf('No se encontró el rubro.');if(k>=0)avisos.splice(k,1)}}
+ if(!p.valorSug){const k=buscarL(L,/^VALOR( TOTAL)?:?$/i),mo=k>=0?/\$\s*([\d.]+)/.exec(L[k+1]||''):null;if(mo)p.valorSug=+mo[1].replace(/\./g,'')}
+ if(!vig){const k=buscarL(L,/^PLAZO DE EJECUCI[ÓO]N:?$/i);if(k>=0&&L[k+1]){const v2=vigDesdeTexto(L[k+1].replace(/\.$/,''),anio);p.mesesSug=v2.meses||p.mesesSug;if(v2.vmodo==='texto')p.vigTexto=v2.vigt;else if(v2.vmodo!=='meses')p.vigSug=v2}}
+ const supTxt=sinTildes([acta,...L.filter(z=>/^PARA\b|SUPERVISI[ÓO]N|NOMBRE DEL SUPERVISOR|^CARGO/i.test(z))].join(' '));
+ if(buscarL(L,/^\d?\.?\d*\.?\s*SUPERVISOR[AE]?\s*:|^3\.4/i)<0&&supTxt.includes('cientific'))p.supervisor='cie';
  ['objeto','obligaciones','alcances'].forEach(c=>{if(!p[c]||!p[c].length)avisos.push(`No se encontró: ${c}.`)});
  if(!p.objeto&&!p.obligaciones.length)avisos.unshift('No parece un expediente de contratación de la ESE (no tiene objeto ni obligaciones).');
  return{p,numero,avisos};
@@ -110,6 +124,20 @@ const resumenCampo=(p,k)=>{const v=p[k];if(k==='vigpago'){const[a,b]=resumenSug(
  if(Array.isArray(v))return v.length?`${v.length} · ${v[0].slice(0,90)}${v[0].length>90?'…':''}`:'—';return v?String(v).slice(0,140)+(String(v).length>140?'…':''):'—'};
 const tieneValor=(p,k)=>k==='vigpago'?true:k==='ejemplo'?!!(p.ejemplo&&p.ejemplo.nombre):Array.isArray(p[k])?p[k].length>0:!!p[k];
 
+/* Un Word por documento: se leen todos y se unen en el orden del expediente */
+async function importarPartes(partes,modo){const L=[],leidos=[],errores=[];
+ for(const[k,n] of DOCLIST){const f=partes[k];if(!f)continue;
+  if(!/\.docx$/i.test(f.name)){errores.push(`${n}: «${f.name}» no es .docx`);continue}
+  try{L.push(...await leerWord(await f.arrayBuffer()));leidos.push(n)}catch(e){errores.push(`${n}: ${e.message||e}`)}}
+ if(!leidos.length){alert('No se pudo leer ningún documento.\n'+errores.join('\n'));return}
+ const base=(partes.est||partes.con||partes.nec||Object.values(partes).find(Boolean)).name;
+ const r=extraerPerfil(L,base);r.p.nombre='';r.pedirNombre=true;
+ const faltan=DOCLIST.filter(([k])=>!partes[k]).map(([,n])=>n);
+ if(!partes.est)r.avisos.unshift('Sin los Estudios previos no se pueden leer la necesidad, la conveniencia ni las consideraciones; lo demás se tomó de los otros documentos.');
+ errores.forEach(e=>r.avisos.unshift(e));
+ impEstado={modo,res:[{archivo:`${leidos.length} documento${leidos.length===1?'':'s'}: ${leidos.join(', ')}`+(faltan.length?` · sin: ${faltan.join(', ')}`:''),...r}],destino:modo==='actualizar'?catI:null};
+ renderImp();$('imp').classList.add('on');
+}
 async function importarWord(files,modo){
  const res=[];
  for(const f of files){if(!/\.docx$/i.test(f.name)){res.push({archivo:f.name,error:'Solo se pueden leer archivos .docx (Word 2007 en adelante). Si es .doc, ábralo en Word y guárdelo como .docx.'});continue}
@@ -121,7 +149,7 @@ function renderImp(){const{modo,res,destino}=impEstado,act=modo==='actualizar',a
  $('impbody').innerHTML=res.map((r,ri)=>{if(r.error)return`<div class="card"><b>${esc(r.archivo)}</b><p class="gmsg bad">${esc(r.error)}</p></div>`;
   const p=r.p,existe=!act&&D.perfiles.find(x=>x.id===p.id);
   return`<div class="card imp" data-ri="${ri}"><p class="note" style="margin:0 0 6px">📎 ${esc(r.archivo)}</p>
-  ${act?'':`<label>Nombre del perfil</label><input data-nombre="${ri}" value="${esc(existe?p.nombre+' (nuevo)':p.nombre)}">${existe?`<p class="hint" style="margin:4px 0 0">Ya existe un perfil «${esc(existe.nombre)}». Se creará uno nuevo; si quería reemplazarlo, cancele, elíjalo en el Catálogo y use «Actualizar desde Word».</p>`:''}`}
+  ${act?'':`<label for="nom-${ri}">Nombre del perfil${r.pedirNombre?' (escríbalo)':''}</label><input id="nom-${ri}" data-nombre="${ri}" placeholder="Ej.: Psicólogo(a), Auxiliar de enfermería – urgencias" value="${esc(existe?p.nombre+' (nuevo)':p.nombre)}">${existe?`<p class="hint" style="margin:4px 0 0">Ya existe un perfil «${esc(existe.nombre)}». Se creará uno nuevo; si quería reemplazarlo, cancele, elíjalo en el Catálogo y use «Actualizar desde Word».</p>`:''}`}
   ${r.avisos.length?`<ul class="checks" style="margin:10px 0 4px">${r.avisos.map(a=>`<li class="warn">${esc(a)}</li>`).join('')}</ul>`:''}
   <p class="q" style="margin:12px 0 4px">${act?'Marque lo que quiere reemplazar':'Lo que se encontró'}</p>
   <div class="scroll"><table class="ptab mini impt"><thead><tr>${act?'<th></th>':''}<th>Parte</th>${act?'<th>Ahora</th>':''}<th>${act?'Del Word':'Valor'}</th></tr></thead><tbody>
@@ -133,13 +161,14 @@ function renderImp(){const{modo,res,destino}=impEstado,act=modo==='actualizar',a
  $('impok').disabled=!res.some(r=>!r.error);
 }
 function aplicarImp(){const{modo,res,destino}=impEstado;let nuevos=0;const marcar=[];
+ if(modo==='crear'){const vacio=[...document.querySelectorAll('#impbody [data-nombre]')].find(el=>!el.value.trim());if(vacio){vacio.classList.add('bad');vacio.focus();vacio.placeholder='Escriba aquí el nombre del perfil';return}}
  res.forEach((r,ri)=>{if(r.error)return;const p=r.p;
   const cb=document.querySelector(`[data-usado="${ri}"]`);if(r.numero&&cb&&cb.checked)marcar.push(r.numero);
   if(modo==='actualizar'){const t=D.perfiles[destino];
    document.querySelectorAll(`.imp[data-ri="${ri}"] [data-campo]:checked`).forEach(c=>{const k=c.dataset.campo;
     if(k==='vigpago'){['mesesSug','vigTexto','vigSug','pagoTexto','pagoSug'].forEach(z=>t[z]=p[z])}else t[k]=p[k]})}
   else{const nombre=(document.querySelector(`[data-nombre="${ri}"]`)?.value||p.nombre).trim()||'Nuevo perfil';
-   let id=p.id||'perfil',n=2;while(D.perfiles.some(x=>x.id===id))id=(p.id||'perfil')+'-'+n++;
+   const base=sinTildes(nombre).replace(/[^a-z]+/g,'-').replace(/^-|-$/g,'')||'perfil';let id=base,n=2;while(D.perfiles.some(x=>x.id===id))id=base+'-'+n++;
    D.perfiles.push({...p,id,nombre});catI=D.perfiles.length-1;nuevos++}});
  if(marcar.length)AJ.usados=[...new Set(usados().concat(marcar))].join(', ');
  $('imp').classList.remove('on');impEstado=null;renderAj();renderPerfilSel();renderCat();render();guardar();
@@ -147,8 +176,25 @@ function aplicarImp(){const{modo,res,destino}=impEstado;let nuevos=0;const marca
  $('catmsg').textContent='✓ '+msg+' Revise los datos abajo y corrija lo que haga falta.';$('catmsg').hidden=false;setTimeout(()=>$('catmsg').hidden=true,8000);
  $('cat').scrollIntoView({block:'start',behavior:'smooth'});
 }
-$('catword').onclick=()=>{$('wordfile').dataset.modo='crear';$('wordfile').multiple=true;$('wordfile').click()};
-$('catwordup').onclick=()=>{$('wordfile').dataset.modo='actualizar';$('wordfile').multiple=false;$('wordfile').click()};
+let origenModo='crear',partesSel={};
+function abrirOrigen(modo){origenModo=modo;partesSel={};
+ $('orit').textContent=modo==='actualizar'?`Actualizar «${D.perfiles[catI].nombre}» desde Word`:'Crear perfil desde Word';
+ $('oriuno').querySelector('small').textContent=modo==='actualizar'?'Un archivo con los 7 documentos seguidos.':'Un archivo con los 7 documentos seguidos. Puede elegir varios expedientes a la vez: se crea un perfil por cada uno.';
+ $('oripartes').hidden=true;renderPartes();$('origen').classList.add('on');$('oriuno').focus()}
+function renderPartes(){$('partes').innerHTML=DOCLIST.map(([k,n],i)=>`<div class="parte"><span><b>${i+1}. ${esc(n)}</b><small>${partesSel[k]?'📎 '+esc(partesSel[k].name):'sin adjuntar'}</small></span>
+  <span class="pbtn">${partesSel[k]?`<button type="button" class="btn sm" data-quitarp="${k}" aria-label="Quitar ${esc(n)}">×</button>`:''}<button type="button" class="btn sm" data-parte="${k}">${partesSel[k]?'Cambiar':'Adjuntar'}</button></span></div>`).join('');
+ const n=Object.values(partesSel).filter(Boolean).length;$('orileer').disabled=!n;$('orileer').textContent=n?`Leer ${n} documento${n===1?'':'s'}`:'Leer documentos'}
+$('catword').onclick=()=>abrirOrigen('crear');
+$('catwordup').onclick=()=>abrirOrigen('actualizar');
+$('oriuno').onclick=()=>{$('origen').classList.remove('on');$('wordfile').dataset.modo=origenModo;$('wordfile').multiple=origenModo==='crear';$('wordfile').click()};
+$('orivarios').onclick=()=>{$('oripartes').hidden=false;$('partes').querySelector('[data-parte]').focus()};
+$('partes').addEventListener('click',e=>{const a=e.target.closest('[data-parte]'),q=e.target.closest('[data-quitarp]');
+ if(q){delete partesSel[q.dataset.quitarp];renderPartes();return}
+ if(a){$('partefile').dataset.k=a.dataset.parte;$('partefile').click()}});
+$('partefile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f){partesSel[e.target.dataset.k]=f;renderPartes()}};
+$('orileer').onclick=()=>{$('origen').classList.remove('on');importarPartes(partesSel,origenModo)};
+$('oric').onclick=()=>$('origen').classList.remove('on');
+$('origen').addEventListener('keydown',e=>{if(e.key==='Escape')$('origen').classList.remove('on')});
 $('wordfile').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)importarWord(fs,e.target.dataset.modo)};
 $('impok').onclick=aplicarImp;$('impc').onclick=()=>{$('imp').classList.remove('on');impEstado=null};
 $('imp').addEventListener('keydown',e=>{if(e.key==='Escape')$('imp').classList.remove('on')});

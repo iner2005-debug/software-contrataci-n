@@ -105,6 +105,11 @@ En la pestaña **Catálogo de perfiles**:
   - O edítelo directamente en el formulario del Catálogo: cada cambio se guarda solo.
 - **Eliminar** el perfil elegido, con confirmación.
 
+Al pulsar 📎, el programa pregunta **cómo tiene los documentos**:
+
+- **Todo en un solo Word**: el expediente completo en un archivo. Para crear, puede elegir varios expedientes a la vez.
+- **Un Word por documento**: siete casillas (Necesidad, Estudios previos, Idoneidad, Designación, Notificación, Contrato, Acta de inicio) para adjuntar cada uno por separado. Se pueden adjuntar solo los que tenga. Lo más completo sale de los Estudios previos; si faltan, el objeto, las obligaciones, los alcances, el rubro, el valor y el plazo se toman del Contrato y del Acta.
+
 El Word se lee dentro del navegador: el documento no se sube a internet.
 
 ## Agregar perfiles desde la terminal (opcional)
